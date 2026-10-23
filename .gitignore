@@ -1,0 +1,10 @@
+# 학생 자료는 저장소에 넣지 않습니다
+*.xlsx
+*.xls
+*.csv
+*.pdf
+
+# 운영체제 · 편집기
+.DS_Store
+Thumbs.db
+.vscode/
