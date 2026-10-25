@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>진로방송부</title>
+<title>신동고 방송부</title>
 <meta name="description" content="교내 방송 · 신문 · 영상 · 행사 중계를 기획부터 송출까지 함께 만드는 방송부 스튜디오">
 <meta name="theme-color" content="#0E0F13">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='8' width='28' height='16' rx='4' fill='%23FF3B30'/><text x='16' y='20' font-size='9' font-family='Arial' font-weight='700' fill='white' text-anchor='middle'>ON AIR</text></svg>">
@@ -425,7 +425,7 @@
   <header class="station">
     <div class="onair" id="onair" title="오늘 방송·중계가 있으면 불이 들어옵니다">ON AIR</div>
     <div class="station-name">
-      <b id="st-name">진로방송부</b>
+      <b id="st-name">신동고 방송부</b>
       <span id="st-clock">--:--:--</span>
     </div>
     <button type="button" class="who" id="who-btn"><i></i><span id="who-label">로그인</span></button>
@@ -621,7 +621,7 @@
   <form id="if-form">
     <div class="field">
       <label for="c-name">방송국 이름</label>
-      <input type="text" id="c-name" autocomplete="off" placeholder="예) 진로방송부">
+      <input type="text" id="c-name" autocomplete="off" placeholder="예) 신동고 방송부">
     </div>
     <div class="field">
       <label for="c-slogan">한 줄 소개</label>
@@ -1186,7 +1186,7 @@ var FIREBASE_CONFIG = {
   var State = {
     cloud:false, teacher:false, user:null,
     me: lsGet("bs.me") || null,
-    info: {name:"진로방송부", slogan:""},
+    info: {name:"신동고 방송부", slogan:""},
     code: "",
     prods: [], items: [], comments: [], members: [], events: [],
     tab: lsGet("bs.tab") || "onair", kindFilter: "all", detailId: null, open: {}
@@ -1334,7 +1334,7 @@ var FIREBASE_CONFIG = {
 
         FB.db.collection("bcInfo").doc("main").onSnapshot(function(doc){
           var v = doc.exists ? (doc.data() || {}) : {};
-          State.info = {name: v.name || "진로방송부", slogan: v.slogan || ""};
+          State.info = {name: v.name || "신동고 방송부", slogan: v.slogan || ""};
           render();
         }, quiet);
 
@@ -2049,7 +2049,7 @@ var FIREBASE_CONFIG = {
       ? dayStamp(c.date) + "/" + dayStamp(c.date, 1)
       : utcStamp(c.date, c.start || CLUB_START) + "/" + utcStamp(c.date, c.end || CLUB_END);
     return "https://calendar.google.com/calendar/render?action=TEMPLATE"
-      + "&text=" + encodeURIComponent((State.info.name || "진로방송부") + " " + title)
+      + "&text=" + encodeURIComponent((State.info.name || "신동고 방송부") + " " + title)
       + "&dates=" + dates
       + "&details=" + encodeURIComponent("수요일 5·6교시 동아리 시간")
       + "&ctz=Asia/Seoul";
@@ -2069,7 +2069,7 @@ var FIREBASE_CONFIG = {
     return out.join("\r\n");
   }
   function downloadIcs(){
-    var name = State.info.name || "진로방송부";
+    var name = State.info.name || "신동고 방송부";
     var stamp = utcStamp(TODAY, "09:00");
     var L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//bangsong//studio//KO", "CALSCALE:GREGORIAN",
              "METHOD:PUBLISH", "X-WR-CALNAME:" + icsEscape(name), "X-WR-TIMEZONE:Asia/Seoul"];
@@ -2812,8 +2812,8 @@ var FIREBASE_CONFIG = {
     }
   }
   function renderStation(){
-    $("st-name").textContent = State.info.name || "진로방송부";
-    document.title = State.info.name || "진로방송부";
+    $("st-name").textContent = State.info.name || "신동고 방송부";
+    document.title = State.info.name || "신동고 방송부";
     var live = State.prods.some(function(p){
       return p.status === "go" && p.date === TODAY && (p.kind === "air" || p.kind === "event");
     });
