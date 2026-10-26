@@ -24,6 +24,7 @@
     color-scheme:dark;
   }
   *{box-sizing:border-box}
+  [hidden]{display:none !important}   /* display 를 준 요소도 hidden 이면 숨깁니다 */
   html,body{margin:0; padding:0}
   body{
     background:var(--bg); color:var(--ink); font-size:16px; line-height:1.6;
@@ -226,6 +227,59 @@
   .cmt-form{display:flex; gap:7px}
   .cmt-form input{flex:1; min-width:0; border:1px solid var(--rule); border-radius:9px; padding:10px 11px; font-size:14px; background:var(--surface); color:var(--ink)}
   .cmt-form button{flex:0 0 auto; border:0; background:var(--ink); color:var(--bg); border-radius:9px; padding:0 15px; font-size:13px; font-weight:700; cursor:pointer}
+
+  /* ── 점심방송 담당 — 방송 콘솔 채널 스트립 */
+  .duty-board{border-radius:18px; padding:12px 10px 10px; background:linear-gradient(180deg, #1B1D25 0%, #111318 100%);
+    border:1px solid var(--rule); box-shadow:var(--shadow); display:flex; flex-direction:column; gap:10px; margin-bottom:18px}
+  .duty-top{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 4px}
+  .duty-kicker{display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--onair); font-weight:600}
+  .duty-kicker i{width:6px; height:6px; border-radius:50%; background:var(--onair); box-shadow:0 0 8px var(--onair); display:block}
+  .duty-title{font-family:var(--display); font-weight:400; font-size:20px; line-height:1.2; margin:2px 0 0}
+  .duty-range{color:var(--muted); letter-spacing:.04em; font-weight:500}
+  .duty-edit{border:1px solid var(--rule); background:var(--surface); color:var(--ink); border-radius:999px; padding:0 13px; height:32px; font-size:12px; font-weight:600; cursor:pointer; flex:0 0 auto}
+  .duty-cols{display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:5px}
+  .duty-col{display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; border-radius:12px; padding:7px 4px 8px;
+    background:var(--surface); border:1px solid var(--surface-3)}
+  .duty-col.today{background:linear-gradient(180deg, rgba(255,59,48,.28) 0%, rgba(255,59,48,.06) 80%); border-color:var(--onair);
+    box-shadow:0 0 0 1px rgba(255,59,48,.35), 0 6px 18px rgba(255,59,48,.22)}
+  .duty-light{font-family:var(--mono); font-size:9px; font-weight:600; color:var(--muted); padding:1px 0; white-space:nowrap}
+  .duty-col.today .duty-light{font-size:8px; letter-spacing:.06em; color:#fff; background:var(--onair); border-radius:4px; padding:1px 4px;
+    box-shadow:0 0 10px rgba(255,59,48,.7)}
+  .duty-day{font-family:var(--display); font-size:19px; line-height:1; margin-bottom:3px; color:var(--ink-2)}
+  .duty-col.today .duty-day{color:#fff}
+  .duty-rule{width:100%; height:1px; background:rgba(255,255,255,.07); margin:2px 0}
+  .duty-p{display:flex; flex-direction:column; align-items:center; gap:1px; width:100%; min-width:0}
+  .duty-av{width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:700;
+    background:var(--surface-3); color:var(--ink-2)}
+  .duty-col.today .duty-av{background:#3A1E21; color:#FFD9D6; box-shadow:0 0 0 1.5px rgba(255,59,48,.6)}
+  .duty-p.me .duty-av{background:var(--ink); color:var(--bg); box-shadow:0 0 0 2px var(--ink)}
+  .duty-col.today .duty-p.me .duty-av{box-shadow:0 0 0 2px var(--onair)}
+  .duty-role{font-family:var(--mono); font-size:8.5px; color:var(--muted); white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis}
+  .duty-name{display:block; width:100%; text-align:center; font-size:11.5px; line-height:1.3; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    border-radius:7px; padding:3px 2px; background:#22252E; color:#D5D8E0}
+  .duty-col.today .duty-name{background:rgba(255,59,48,.22); color:#FFE3E1; font-weight:600}
+  .duty-p.me .duty-name{background:var(--ink); color:var(--bg); font-weight:700}
+  .duty-empty{font-size:11px; color:var(--muted); padding:3px 0}
+  /* 판 안의 ‘오늘 마이크’는 한 줄로 작게 */
+  .duty-board .mic-strip{padding:8px 11px; gap:10px; border-radius:12px}
+  .duty-board .mic-strip .mic{width:28px; height:28px; box-shadow:0 0 12px rgba(255,59,48,.55)}
+  .duty-board .mic-strip .mic svg{width:15px; height:15px; stroke-width:2.2}
+  .duty-board .mic-strip .bd{display:flex; align-items:baseline; gap:8px}
+  .duty-board .mic-strip .lb{font-size:10px; letter-spacing:.1em; white-space:nowrap}
+  .duty-board .mic-strip .nm{font-size:14px; margin-top:0}
+  .mic-strip{display:flex; align-items:center; gap:12px; border-radius:14px; padding:11px 13px; width:100%; text-align:left; color:var(--ink);
+    background:linear-gradient(90deg, rgba(255,59,48,.18), rgba(255,59,48,.04)); border:1px solid rgba(255,59,48,.4)}
+  button.mic-strip{cursor:pointer; margin-top:10px}
+  .mic-strip .mic{width:36px; height:36px; border-radius:50%; background:var(--onair); display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 16px rgba(255,59,48,.55); flex:0 0 auto}
+  .mic-strip .mic svg{width:18px; height:18px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round}
+  .mic-strip .bd{flex:1; min-width:0}
+  .mic-strip .lb{display:block; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; color:#FF8A82; font-weight:600}
+  .mic-strip .nm{display:block; font-size:15px; font-weight:700; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .mic-strip .nm i{font-style:normal; color:var(--muted); font-weight:500}
+  .mic-strip .me{font-size:10.5px; font-weight:700; border-radius:5px; padding:2px 7px; background:var(--ink); color:var(--bg); white-space:nowrap}
+  .mic-strip .go{font-size:12px; color:var(--muted); white-space:nowrap}
+  @media (max-width:360px){ .duty-name{font-size:10.5px} .duty-day{font-size:17px} }
 
   /* ── 다음 동아리 */
   .nextclub{
@@ -574,6 +628,25 @@
       <button type="button" class="btn danger" id="i-delete" hidden>지우기</button>
       <button type="button" class="btn" data-close>취소</button>
       <button type="submit" class="btn rec">올리기</button>
+    </div>
+  </form>
+</div>
+
+<!-- 점심방송 담당 -->
+<div class="sheet" id="sheet-duty" role="dialog" aria-modal="true" aria-labelledby="dt-title">
+  <h2 id="dt-title">점심방송 담당</h2>
+  <p class="lead">요일마다 점심시간 방송을 맡을 부원을 적습니다. 쉼표로 나눠 적으면 됩니다. 역할을 붙여도 됩니다 — 예) 아나운서 김하늘, 엔지니어 이준서</p>
+  <form id="dt-form">
+    <div class="field"><label for="d-mon">월요일</label><input type="text" id="d-mon" autocomplete="off" placeholder="예) 김하늘, 이준서"></div>
+    <div class="field"><label for="d-tue">화요일</label><input type="text" id="d-tue" autocomplete="off"></div>
+    <div class="field"><label for="d-wed">수요일</label><input type="text" id="d-wed" autocomplete="off"></div>
+    <div class="field"><label for="d-thu">목요일</label><input type="text" id="d-thu" autocomplete="off"></div>
+    <div class="field"><label for="d-fri">금요일</label><input type="text" id="d-fri" autocomplete="off"></div>
+    <p class="hint" id="d-names" hidden></p>
+    <p class="form-err" id="dt-err" hidden></p>
+    <div class="sheet-actions">
+      <button type="button" class="btn" data-close>취소</button>
+      <button type="submit" class="btn rec">저장</button>
     </div>
   </form>
 </div>
@@ -1189,6 +1262,7 @@ var FIREBASE_CONFIG = {
     info: {name:"신동고 방송부", slogan:""},
     code: "",
     prods: [], items: [], comments: [], members: [], events: [],
+    duty: {mon:[], tue:[], wed:[], thu:[], fri:[]},
     tab: lsGet("bs.tab") || "onair", kindFilter: "all", detailId: null, open: {}
   };
   var CLIENT = lsGet("bs.client");
@@ -1284,6 +1358,7 @@ var FIREBASE_CONFIG = {
       State.comments = lsGet("bs.comments") || [];
       State.members = lsGet("bs.members") || [];
       State.events = lsGet("bs.events") || [];
+      State.duty = lsGet("bs.duty") || State.duty;
       State.teacher = !!lsGet("bs.teacherMode");
     },
     save:function(){
@@ -1294,6 +1369,7 @@ var FIREBASE_CONFIG = {
       lsSet("bs.comments", State.comments);
       lsSet("bs.members", State.members);
       lsSet("bs.events", State.events);
+      lsSet("bs.duty", State.duty);
     }
   };
   var LOCAL_KEY = {bcProds:"prods", bcItems:"items", bcComments:"comments", bcEvents:"events"};
@@ -1335,6 +1411,14 @@ var FIREBASE_CONFIG = {
         FB.db.collection("bcInfo").doc("main").onSnapshot(function(doc){
           var v = doc.exists ? (doc.data() || {}) : {};
           State.info = {name: v.name || "신동고 방송부", slogan: v.slogan || ""};
+          render();
+        }, quiet);
+
+        FB.db.collection("bcDuty").doc("week").onSnapshot(function(doc){
+          var v = doc.exists ? (doc.data() || {}) : {};
+          var d = {};
+          DUTY_DAYS.forEach(function(x){ d[x.key] = Array.isArray(v[x.key]) ? v[x.key] : []; });
+          State.duty = d;
           render();
         }, quiet);
 
@@ -1815,6 +1899,136 @@ var FIREBASE_CONFIG = {
     return out.sort(function(a, b){ return a.sort < b.sort ? -1 : 1; });
   }
 
+  /* ---------------- 점심방송 담당 ---------------- */
+  var DUTY_DAYS = [
+    {key:"mon", label:"월", dow:1}, {key:"tue", label:"화", dow:2}, {key:"wed", label:"수", dow:3},
+    {key:"thu", label:"목", dow:4}, {key:"fri", label:"금", dow:5}
+  ];
+  function todayDutyKey(){
+    var w = kstNow().getDay();
+    var hit = DUTY_DAYS.filter(function(x){ return x.dow === w; })[0];
+    return hit ? hit.key : "";
+  }
+  // "아나운서 김하늘" → 역할 "아나운서", 이름 "김하늘"
+  function dutySplit(entry){
+    var parts = String(entry || "").trim().split(/\s+/);
+    return {name: parts[parts.length - 1] || "", role: parts.slice(0, -1).join(" ")};
+  }
+  function dutyIsMe(entry){
+    var n = myName();
+    return !!n && !State.teacher && dutySplit(entry).name === n;
+  }
+  // 이번 주(주말이면 다음 주) 월요일
+  function dutyMonday(){
+    var t = today_(), w = t.getDay();
+    return addDays(t, w === 0 ? 1 : (w === 6 ? 2 : 1 - w));
+  }
+  function micIcon(){
+    var m = el("span", "mic");
+    m.appendChild(svgIcon('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'));
+    return m;
+  }
+  // 오늘 마이크 띠 — 평일이고 담당이 있을 때만
+  function micStrip(asButton){
+    var key = todayDutyKey();
+    var list = key ? (State.duty[key] || []) : [];
+    if(!list.length) return null;
+    var day = DUTY_DAYS.filter(function(x){ return x.key === key; })[0];
+    var b = el(asButton ? "button" : "div", "mic-strip");
+    if(asButton) b.type = "button";
+    b.appendChild(micIcon());
+    var bd = el("span", "bd");
+    bd.appendChild(el("span", "lb", "오늘 마이크 · " + day.label));
+    var nm = el("span", "nm");
+    list.forEach(function(e, i){
+      if(i) nm.appendChild(el("i", null, " · "));
+      nm.appendChild(document.createTextNode(dutySplit(e).name));
+    });
+    bd.appendChild(nm);
+    b.appendChild(bd);
+    if(list.some(dutyIsMe)) b.appendChild(el("span", "me", "나도 있어요"));
+    else if(asButton) b.appendChild(el("span", "go", "담당표 ›"));
+    if(asButton) b.addEventListener("click", function(){ State.tab = "cal"; lsSet("bs.tab", "cal"); window.scrollTo(0, 0); render(); });
+    return b;
+  }
+  function dutyTable(){
+    var board = el("section", "duty-board");
+    board.setAttribute("aria-label", "점심방송 담당");
+    var top = el("div", "duty-top");
+    var tl = el("div");
+    var k = el("div", "duty-kicker");
+    k.appendChild(el("i"));
+    k.appendChild(document.createTextNode("LUNCH ON AIR"));
+    var mon = dutyMonday(), fri = addDays(mon, 4);
+    function md(d){ return (d.getMonth() + 1) + "." + (d.getDate() < 10 ? "0" : "") + d.getDate(); }
+    var w = today_().getDay();
+    k.appendChild(el("span", "duty-range", "· " + md(mon) + " – " + md(fri) + (w === 0 || w === 6 ? " 다음 주" : "")));
+    tl.appendChild(k);
+    tl.appendChild(el("h2", "duty-title", "점심방송 담당"));
+    top.appendChild(tl);
+    if(State.teacher){
+      var eb = el("button", "duty-edit", "고치기");
+      eb.type = "button";
+      eb.addEventListener("click", openDuty);
+      top.appendChild(eb);
+    }
+    board.appendChild(top);
+
+    var cols = el("div", "duty-cols");
+    var todayKey = todayDutyKey();
+    DUTY_DAYS.forEach(function(x, i){
+      var isToday = x.key === todayKey;
+      var col = el("div", "duty-col" + (isToday ? " today" : ""));
+      var d = addDays(mon, i);
+      col.appendChild(el("span", "duty-light", isToday ? "ON AIR" : (d.getMonth() + 1) + "/" + d.getDate()));
+      col.appendChild(el("span", "duty-day", x.label));
+      var list = State.duty[x.key] || [];
+      if(!list.length) col.appendChild(el("span", "duty-empty", "—"));
+      list.forEach(function(entry){
+        var sp = dutySplit(entry);
+        var pp = el("span", "duty-p" + (dutyIsMe(entry) ? " me" : ""));
+        if(sp.role) pp.appendChild(el("span", "duty-role", sp.role));
+        pp.appendChild(el("span", "duty-name", sp.name));
+        pp.title = entry;
+        col.appendChild(pp);
+      });
+      cols.appendChild(col);
+    });
+    board.appendChild(cols);
+    var strip = micStrip(false);
+    if(strip) board.appendChild(strip);
+    if(State.teacher && !DUTY_DAYS.some(function(x){ return (State.duty[x.key] || []).length; })){
+      board.appendChild(el("p", "hint", "‘고치기’로 요일마다 담당 부원을 적어 주세요. 부원 화면과 ON AIR에 바로 보입니다."));
+    }
+    return board;
+  }
+  function todayDutyCard(){ return micStrip(true); }
+  function openDuty(){
+    if(!State.teacher) return;
+    DUTY_DAYS.forEach(function(x){ $("d-" + x.key).value = (State.duty[x.key] || []).join(", "); });
+    var names = memberNames().map(function(m){ return m.name; });
+    $("d-names").hidden = !names.length;
+    $("d-names").textContent = names.length ? "들어온 부원: " + names.join(", ") : "";
+    $("dt-err").hidden = true;
+    openSheet("sheet-duty");
+  }
+  $("dt-form").addEventListener("submit", function(e){
+    e.preventDefault();
+    var body = {updatedAt: Date.now()};
+    DUTY_DAYS.forEach(function(x){
+      body[x.key] = $("d-" + x.key).value.split(/[,，、\n]+/)
+        .map(function(t){ return t.trim(); }).filter(Boolean).slice(0, 8);
+    });
+    var work = State.cloud
+      ? FB.db.collection("bcDuty").doc("week").set(body)
+      : (DUTY_DAYS.forEach(function(x){ State.duty[x.key] = body[x.key]; }), Local.save(), Promise.resolve());
+    withPatience(work).then(function(how){
+      if(!State.cloud) render();
+      closeSheets();
+      savedToast(how, "점심방송 담당을 저장했습니다");
+    })["catch"](function(ex){ showErr("dt-err", errText(ex)); });
+  });
+
   /* ON AIR 맨 위 — 다음 동아리 */
   function nextClubCard(){
     var c = nextClub();
@@ -1836,7 +2050,7 @@ var FIREBASE_CONFIG = {
     var due = State.prods.filter(function(p){ return p.status === "go" && p.date === c.date; });
     if(due.length) box.appendChild(el("div", "sub", "이날 만드는 것 · " + due.map(function(p){ return p.title; }).join(" / ")));
     var row = el("div", "row");
-    var go = el("button", "link-btn", "캘린더 보기");
+    var go = el("button", "link-btn", "일정 보기");
     go.type = "button";
     go.addEventListener("click", function(){ State.tab = "cal"; calSel = c.date; calCursor = null; lsSet("bs.tab", "cal"); render(); });
     row.appendChild(go);
@@ -1900,7 +2114,8 @@ var FIREBASE_CONFIG = {
       calCursor = new Date(s0.getFullYear(), s0.getMonth(), 1);
     }
     var sec = el("section");
-    sec.appendChild(el("h1", "page-title", "캘린더"));
+    sec.appendChild(el("h1", "page-title", "일정"));
+    sec.appendChild(dutyTable());
     sec.appendChild(clubTable());
     v.appendChild(sec);
 
@@ -2165,6 +2380,8 @@ var FIREBASE_CONFIG = {
     sec.appendChild(el("h1", "page-title", "ON AIR"));
     if(State.info.slogan) sec.appendChild(el("p", "page-sub", State.info.slogan));
     sec.appendChild(nextClubCard());
+    var dc = todayDutyCard();
+    if(dc) sec.appendChild(dc);
 
     if(State.cloud && !canWrite()){
       var nt = el("div", "notice");
@@ -2758,7 +2975,7 @@ var FIREBASE_CONFIG = {
      icon:'<circle cx="12" cy="11" r="2"/><path d="M8.5 7.5a5 5 0 0 0 0 7M15.5 7.5a5 5 0 0 1 0 7M5.6 4.6a9 9 0 0 0 0 12.8M18.4 4.6a9 9 0 0 1 0 12.8M12 13v8"/>'},
     {id:"studio", label:"제작",
      icon:'<rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M4 9l1.5-4.5h14L20 9M9.5 4.5 8 9M15 4.5 13.5 9"/>'},
-    {id:"cal", label:"캘린더",
+    {id:"cal", label:"일정",
      icon:'<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M7.5 13h2M11 13h2M14.5 13h2M7.5 16.5h2M11 16.5h2"/>'},
     {id:"archive", label:"아카이브",
      icon:'<rect x="3.5" y="4" width="17" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>'},
@@ -2853,8 +3070,8 @@ var FIREBASE_CONFIG = {
   window.addEventListener("resize", function(){ document.body.classList.toggle("wide", window.innerWidth >= 1024); });
 
   /* ================= 시트 ================= */
-  var SHEETS = ["sheet-login","sheet-prod","sheet-item","sheet-info","sheet-ev"];
-  var GUARD = ["sheet-prod","sheet-item","sheet-info","sheet-ev"];
+  var SHEETS = ["sheet-login","sheet-prod","sheet-item","sheet-info","sheet-ev","sheet-duty"];
+  var GUARD = ["sheet-prod","sheet-item","sheet-info","sheet-ev","sheet-duty"];
   var sheetTouched = false;
   function openGuardSheet(){
     var open = null;
