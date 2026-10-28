@@ -220,6 +220,7 @@
     font-family:var(--serif); -webkit-print-color-adjust:exact; print-color-adjust:exact; position:relative;
   }
   .np-page.a3{--u:1.41421mm}
+  .np-page.b4{--u:1.22381mm}
   .np-page.t-blue{--paper:#F5F8FC; --ink-np:#0F1B2D; --accent:#1F5FBF; --soft:#E3EBF6; --rule-np:#0F1B2D; --muted-np:#4A5A70}
   .np-page.t-warm{--paper:#FFF8EE; --ink-np:#2A1C11; --accent:#D2601F; --soft:#F6E7D2; --rule-np:#2A1C11; --muted-np:#7A6350}
   .np-page *{box-sizing:border-box}
@@ -266,7 +267,7 @@
   .np-main{display:flex; gap:calc(4.5 * var(--u)); flex:1; min-height:0}
   .np-art.full .np-main, .np-art.front .np-main{flex-direction:column}
   .np-photos{display:flex; flex-direction:column; gap:calc(2 * var(--u)); flex:0 0 auto}
-  .np-art.half .np-photos{width:calc(68 * var(--u))}
+  .np-art.half .np-photos{width:calc(58 * var(--u))}
   .np-art.full .np-photos, .np-art.front .np-photos{flex-direction:row; flex-wrap:wrap; gap:calc(2.6 * var(--u))}
   .np-fig{margin:0; display:flex; flex-direction:column; gap:calc(1 * var(--u))}
   .np-fig .im{width:100%; background:var(--soft); overflow:hidden; display:flex; align-items:center; justify-content:center}
@@ -275,13 +276,13 @@
   .np-fig figcaption{font-family:"IBM Plex Sans KR", sans-serif; font-size:calc(2.25 * var(--u)); line-height:1.45; color:var(--muted-np)}
   .np-fig figcaption::before{content:"▲ "; color:var(--dc)}
   /* 사진 크기 — 장수에 따라 */
-  .np-art.half .np-fig.main .im{height:calc(46 * var(--u))}
-  .np-art.half .np-fig.sub .im{height:calc(24 * var(--u))}
+  .np-art.half .np-fig.main .im{height:calc(40 * var(--u))}
+  .np-art.half .np-fig.sub .im{height:calc(20 * var(--u))}
   .np-art.half .np-subs{display:grid; grid-template-columns:1fr 1fr; gap:calc(2 * var(--u))}
   .np-art.full .np-fig, .np-art.front .np-fig{flex:1 1 0; min-width:0}
   .np-art.full .np-fig .im, .np-art.front .np-fig .im{height:calc(var(--ph, 70) * var(--u))}
   .np-text{flex:1; min-width:0; min-height:0; display:flex; flex-direction:column}
-  .np-body{flex:1; min-height:0; font-family:var(--serif); font-size:calc(var(--fs) * var(--u)); line-height:1.72; text-align:justify; word-break:normal; line-break:strict;
+  .np-body{flex:1; min-height:0; font-family:var(--serif); font-size:calc(var(--fs) * var(--u)); line-height:1.66; text-align:justify; word-break:normal; line-break:strict;
     overflow-wrap:anywhere; column-gap:calc(5 * var(--u)); column-rule:calc(.2 * var(--u)) solid rgba(0,0,0,.15); column-fill:balance; overflow:hidden}
   .np-art.half .np-body{columns:2}
   .np-art.full .np-body, .np-art.cont .np-body{columns:2}
@@ -495,7 +496,7 @@
   <p class="lead">인쇄 창이 열리면 아래처럼 고르고 저장하세요. 한글 글꼴과 사진이 그대로 들어갑니다.</p>
   <ol style="margin:0 0 6px; padding-left:1.3em; line-height:1.9; font-size:14px">
     <li><b>대상</b> → <b>PDF로 저장</b></li>
-    <li><b>용지 크기</b> → 지금 신문 크기(<span id="pf-size">A4</span>)</li>
+    <li><b>용지 크기</b> → <span id="pf-size">B4</span></li>
     <li><b>여백</b> → <b>없음</b> (설정 더보기 안에 있습니다)</li>
     <li><b>배경 그래픽</b>이 보이면 켜 주세요</li>
   </ol>
@@ -1247,7 +1248,7 @@ var FIREBASE_CONFIG = {
   }
   var DEFAULT_CFG = {
     title: "나의 학과를 소개해!", kicker: "신동고 방송부 진로신문", issue: "제1호", date: "",
-    note: "", theme: "classic", size: "A4",
+    note: "", theme: "classic", size: "B4",
     order: [], lead: "", span: {}, contain: {}, hidden: {}, edits: {}
   };
   function fullDate(iso){
@@ -1946,10 +1947,11 @@ var FIREBASE_CONFIG = {
   /* ================= 지면 만들기 =================
      실제 크기로 숨은 곳에 그려 보고, 넘치면 글자를 줄이고 → 반 면을 한 면으로 → 다음 면으로 이어 붙입니다.
      그래서 글과 사진이 하나도 빠지지 않습니다. */
-  var FS_STEPS = [3.45, 3.3, 3.15, 3.0, 2.88, 2.76];
+  // 본문 글자 크기(u). B4 로 뽑으면 2.9u ≈ 10pt, 가장 작게 2.4u ≈ 8.3pt
+  var FS_STEPS = [2.9, 2.8, 2.7, 2.6, 2.5, 2.4];
   function mk(tag, cls, text){ return el(tag, cls, text); }
   function pageShell(cfg, no, front){
-    var pg = mk("section", "np-page" + (cfg.size === "A3" ? " a3" : "") + (cfg.theme === "blue" ? " t-blue" : (cfg.theme === "warm" ? " t-warm" : "")));
+    var pg = mk("section", "np-page" + (cfg.size === "A3" ? " a3" : (cfg.size === "B4" ? " b4" : "")) + (cfg.theme === "blue" ? " t-blue" : (cfg.theme === "warm" ? " t-warm" : "")));
     pg.setAttribute("aria-label", no + "면");
     if(!front){
       var run = mk("div", "np-run");
@@ -2023,7 +2025,7 @@ var FIREBASE_CONFIG = {
         }
       } else {
         var n = figs.length;
-        var base = !a.photos.length ? 34 : (mode === "front" ? (n === 1 ? 64 : (n === 2 ? 52 : 40)) : (n === 1 ? 84 : (n === 2 ? 66 : (n === 3 ? 52 : 46))));
+        var base = !a.photos.length ? 34 : (mode === "front" ? (n === 1 ? 54 : (n === 2 ? 46 : 38)) : (n === 1 ? 62 : (n === 2 ? 54 : (n === 3 ? 44 : 38))));
         photoBox.style.setProperty("--ph", base);
         figs.forEach(function(f){
           // 4장은 한 줄에, 5장 이상은 세 장씩
@@ -2547,7 +2549,7 @@ var FIREBASE_CONFIG = {
     var sz = mk("div", "field");
     sz.appendChild(mk("label", null, "용지"));
     var sp = mk("div", "row");
-    [["A4", "A4 (나눠 주기)"], ["A3", "A3 (게시판에 붙이기)"]].forEach(function(s){
+    [["B4", "B4 (학교 인쇄)"], ["A4", "A4"], ["A3", "A3 (게시판)"]].forEach(function(s){
       var b = btn("chip", s[1], function(){ var c = cfgOf(prod()); c.size = s[0]; saveCfg(c, s[0] + " 용지"); });
       b.setAttribute("aria-pressed", cfg.size === s[0] ? "true" : "false");
       sp.appendChild(b);
@@ -2665,13 +2667,14 @@ var FIREBASE_CONFIG = {
 
   /* ---------------- PDF ---------------- */
   function openPdf(){
-    $("pf-size").textContent = cfgOf(prod()).size;
+    var sz = cfgOf(prod()).size;
+    $("pf-size").textContent = sz === "B4" ? "B4 (JIS B4, 257 × 364mm)" : sz;
     openSheet("sheet-pdf");
   }
   $("pf-go").addEventListener("click", function(){
     var cfg = cfgOf(prod());
     closeSheets();
-    $("page-size").textContent = "@page{size:" + (cfg.size === "A3" ? "A3" : "A4") + " portrait; margin:0}";
+    $("page-size").textContent = "@page{size:" + (cfg.size === "A3" ? "A3" : (cfg.size === "B4" ? "257mm 364mm" : "A4")) + "; margin:0}";
     var root = $("print-root");
     clear(root);
     // 화면용으로 줄여 둔 지면을 원래 크기로 복사합니다
