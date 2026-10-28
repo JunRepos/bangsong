@@ -186,6 +186,14 @@
   .np-slotph{flex:1; margin-top:calc(4 * var(--u)); border:calc(.4 * var(--u)) dashed rgba(0,0,0,.22); border-radius:calc(2 * var(--u)); display:flex; align-items:center;
     justify-content:center; color:#A39E92; font-family:"IBM Plex Sans KR", sans-serif; font-size:calc(3.4 * var(--u))}
   .size-pick{display:flex; gap:8px; flex-wrap:wrap}
+  .wr-design{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; padding:10px 16px; background:var(--surface); border-bottom:1px solid var(--rule)}
+  .wr-design .grp{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .wr-design .grp > span{font-size:12.5px; color:var(--muted); font-weight:700}
+  .swatches{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+  .swatches button{width:26px; height:26px; border-radius:50%; border:2px solid var(--surface); cursor:pointer; box-shadow:0 0 0 1px var(--rule)}
+  .swatches button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
+  .swatches button.auto{width:auto; height:28px; padding:0 11px; border-radius:999px; font-size:12px; font-weight:700; color:var(--ink); background:var(--surface-2); border:1px solid var(--rule); box-shadow:none}
+  .swatches button.auto[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
   .np-holder > .np-page{position:absolute; top:0; left:0; transform-origin:0 0}
   .np-pagenum{font-family:var(--mono); font-size:11.5px; color:var(--muted); text-align:center; margin-top:6px}
   .np-measure{position:absolute; left:-30000px; top:0; visibility:hidden; pointer-events:none}
@@ -265,10 +273,7 @@
   .np-lead{font-family:var(--serif); font-weight:700; font-size:calc(var(--fs) * 1.12 * var(--u)); line-height:1.6; margin:0 0 calc(2.6 * var(--u));
     padding-left:calc(2.6 * var(--u)); border-left:calc(1 * var(--u)) solid var(--dc); color:var(--ink-np); word-break:keep-all}
   .np-main{display:flex; gap:calc(4.5 * var(--u)); flex:1; min-height:0}
-  .np-art.full .np-main, .np-art.front .np-main{flex-direction:column}
   .np-photos{display:flex; flex-direction:column; gap:calc(2 * var(--u)); flex:0 0 auto}
-  .np-art.half .np-photos{width:calc(58 * var(--u))}
-  .np-art.full .np-photos, .np-art.front .np-photos{flex-direction:row; flex-wrap:wrap; gap:calc(2.6 * var(--u))}
   .np-fig{margin:0; display:flex; flex-direction:column; gap:calc(1 * var(--u))}
   .np-fig .im{width:100%; background:var(--soft); overflow:hidden; display:flex; align-items:center; justify-content:center}
   .np-fig img{width:100%; height:100%; object-fit:cover; display:block}
@@ -276,11 +281,18 @@
   .np-fig figcaption{font-family:"IBM Plex Sans KR", sans-serif; font-size:calc(2.25 * var(--u)); line-height:1.45; color:var(--muted-np)}
   .np-fig figcaption::before{content:"▲ "; color:var(--dc)}
   /* 사진 크기 — 장수에 따라 */
-  .np-art.half .np-fig.main .im{height:calc(40 * var(--u))}
-  .np-art.half .np-fig.sub .im{height:calc(20 * var(--u))}
-  .np-art.half .np-subs{display:grid; grid-template-columns:1fr 1fr; gap:calc(2 * var(--u))}
-  .np-art.full .np-fig, .np-art.front .np-fig{flex:1 1 0; min-width:0}
-  .np-art.full .np-fig .im, .np-art.front .np-fig .im{height:calc(var(--ph, 70) * var(--u))}
+  /* 사진 위치: 왼쪽 · 오른쪽(옆에 세로로) / 위 · 아래(가로로 한 줄) — 학생이 고르고, 안 고르면 반 페이지는 왼쪽 · 한 페이지는 위 */
+  .np-art.pos-left .np-main{flex-direction:row}
+  .np-art.pos-right .np-main{flex-direction:row-reverse}
+  .np-art.pos-top .np-main{flex-direction:column}
+  .np-art.pos-bottom .np-main{flex-direction:column-reverse}
+  .np-photos.side{flex-direction:column; width:calc(var(--pw, 58) * var(--u)); align-self:flex-start}
+  .np-photos.side .np-fig.main .im{height:calc(var(--hm, 40) * var(--u))}
+  .np-photos.side .np-fig.sub .im{height:calc(var(--hsub, 20) * var(--u))}
+  .np-photos.side .np-subs{display:grid; grid-template-columns:1fr 1fr; gap:calc(2 * var(--u))}
+  .np-photos.row{flex-direction:row; flex-wrap:wrap; gap:calc(2.6 * var(--u))}
+  .np-photos.row .np-fig{flex:1 1 0; min-width:0}
+  .np-photos.row .np-fig .im{height:calc(var(--ph, 60) * var(--u))}
   .np-text{flex:1; min-width:0; min-height:0; display:flex; flex-direction:column}
   .np-body{flex:1; min-height:0; font-family:var(--serif); font-size:calc(var(--fs) * var(--u)); line-height:1.66; text-align:justify; word-break:normal; line-break:strict;
     overflow-wrap:anywhere; column-gap:calc(5 * var(--u)); column-rule:calc(.2 * var(--u)) solid rgba(0,0,0,.15); column-fill:balance; overflow:hidden}
@@ -456,10 +468,18 @@
     </div>
     <label class="btn sm" for="wr-photo">＋ 사진 추가</label>
     <input type="file" id="wr-photo" accept="image/*" multiple hidden>
+    <button type="button" class="btn sm" id="wr-design-btn" aria-expanded="false" aria-controls="wr-design">디자인 바꾸기</button>
     <span class="sp"></span>
     <button type="button" class="btn sm" id="wr-form">칸으로 쓰기</button>
     <button type="button" class="btn sm" id="wr-close">닫기</button>
     <button type="button" class="btn sm rec" id="wr-save">저장</button>
+  </div>
+  <div class="wr-design" id="wr-design" hidden>
+    <div class="grp"><span>사진 위치</span><div class="size-pick" id="wd-pos"></div></div>
+    <div class="grp"><span>사진 크기</span><div class="size-pick" id="wd-size"></div></div>
+    <div class="grp"><span>사진 모양</span><div class="size-pick" id="wd-fit"></div></div>
+    <div class="grp"><span>색</span><div class="swatches" id="wd-color"></div></div>
+    <button type="button" class="btn sm" id="wd-reset">디자인 처음으로</button>
   </div>
   <div class="wr-status" id="wr-status">점선 칸을 눌러 바로 쓰세요. 사진은 ‘사진 추가’를 누르거나 캡처해서 Ctrl+V 로 붙여 넣습니다.</div>
   <div id="wr-stage"></div>
@@ -1280,6 +1300,18 @@ var FIREBASE_CONFIG = {
       .sort(function(a, b){ return (a.createdAt || 0) - (b.createdAt || 0); });
   }
   // 지면에 쓸 기사 — 선생님이 지면용으로 고친 글이 있으면 그것을 씁니다(원문은 그대로)
+  // 학생이 고른 디자인 — 고르지 않은 것은 비워 두면 기본 모양
+  var STYLE_COLORS = [["빨강", "#C9243F"], ["분홍", "#C2397A"], ["주황", "#D2691E"], ["노랑", "#B8860B"], ["초록", "#2E7D46"],
+    ["청록", "#0F7C80"], ["파랑", "#1F5FAF"], ["남색", "#2B3A67"], ["보라", "#5B3FA8"], ["먹색", "#2A2724"]];
+  function cleanStyle(x){
+    x = x || {};
+    var o = {};
+    if(/^(left|right|top|bottom)$/.test(x.pos || "")) o.pos = x.pos;
+    if(/^(s|l)$/.test(x.size || "")) o.size = x.size;
+    if(x.fit === "contain") o.fit = "contain";
+    if(/^#[0-9a-fA-F]{6}$/.test(x.color || "")) o.color = x.color;
+    return o;
+  }
   function article(it, cfg){
     var ed = (cfg.edits && cfg.edits[it.id]) || {};
     var caps = (ed.caps && ed.caps.length) ? ed.caps : (it.caps || []);
@@ -1293,6 +1325,7 @@ var FIREBASE_CONFIG = {
       message: it.message || "",
       prepare: it.prepare || it.learn || "", prepLabel: (!it.prepare && it.learn) ? "배우는 것" : "준비할 것",
       future: it.future || "", size: it.size === "full" ? "full" : (it.size === "half" ? "half" : ""),
+      st: cleanStyle(it.style), color: cleanStyle(it.style).color || catOf(it.dept).color,
       photos: photos, edited: !!(ed.head || ed.lead || ed.body || (ed.caps && ed.caps.length))
     };
   }
@@ -1498,7 +1531,7 @@ var FIREBASE_CONFIG = {
       }
       var cb = el("div", "cb");
       var d = el("span", "dept", a.dept);
-      d.style.setProperty("--dc", a.cat.color);
+      d.style.setProperty("--dc", a.color);
       cb.appendChild(d);
       cb.appendChild(el("h3", null, a.head));
       cb.appendChild(el("div", "by", (a.grade ? a.grade + " " : "") + a.name + " 기자" + (it.id === mineId ? " · 내 칼럼" : "")));
@@ -1526,7 +1559,7 @@ var FIREBASE_CONFIG = {
     if(!it){ closeSheets(); return; }
     var a = article(it, cfgOf(prod()));
     var d = el("span", "dept", a.dept + " · " + a.cat.label);
-    d.style.setProperty("--dc", a.cat.color);
+    d.style.setProperty("--dc", a.color);
     box.appendChild(d);
     var h = el("h2", null, a.head);
     h.id = "vw-title";
@@ -1676,6 +1709,7 @@ var FIREBASE_CONFIG = {
     $("f-prep").value = it ? (it.prepare || it.learn || "") : "";
     $("f-future").value = it ? (it.future || "") : "";
     postSize = it && it.size === "full" ? "full" : "half";
+    postStyle = cleanStyle(it && it.style);
     drawSize();
     countBody();
     shots = ((it && it.photos) || []).map(function(p, i){ return {url:p.url, path:p.path || "", cap:((it.caps || [])[i]) || ""}; });
@@ -1688,7 +1722,7 @@ var FIREBASE_CONFIG = {
     openSheet("sheet-post");
     setTimeout(function(){ $(it ? "f-body" : "f-dept").focus(); }, 200);
   }
-  var postSize = "half";
+  var postSize = "half", postStyle = {};
   function drawSize(){
     $("f-half").setAttribute("aria-pressed", postSize === "half" ? "true" : "false");
     $("f-full").setAttribute("aria-pressed", postSize === "full" ? "true" : "false");
@@ -1698,12 +1732,13 @@ var FIREBASE_CONFIG = {
   $("f-full").addEventListener("click", function(){ postSize = "full"; drawSize(); sheetTouched = true; });
   function formDraft(){
     return {dept: $("f-dept").value.trim(), head: $("f-head").value.trim(), text: $("f-body").value.replace(/\r/g, "").trim(),
-      message: $("f-msg").value.trim(), prepare: $("f-prep").value.trim(), future: $("f-future").value.trim(), size: postSize};
+      message: $("f-msg").value.trim(), prepare: $("f-prep").value.trim(), future: $("f-future").value.trim(), size: postSize, style: postStyle};
   }
   function draftToForm(d){
     $("f-dept").value = d.dept; $("f-head").value = d.head; $("f-body").value = d.text;
     $("f-msg").value = d.message; $("f-prep").value = d.prepare; $("f-future").value = d.future;
     postSize = d.size === "full" ? "full" : "half";
+    postStyle = cleanStyle(d.style);
     drawSize(); countBody(); drawShots();
   }
   // 칸으로 쓰든 지면에서 쓰든 여기서 저장합니다
@@ -1738,6 +1773,7 @@ var FIREBASE_CONFIG = {
       data.dept = d.dept; data.headline = d.head; data.text = d.text;
       data.message = d.message; data.prepare = d.prepare; data.future = d.future;
       data.size = d.size === "full" ? "full" : "half";
+      data.style = cleanStyle(d.style);
       data.createdAt = was ? (was.createdAt || Date.now()) : Date.now();
       data.updatedAt = Date.now();
       return withPatience(put("bcItems", id, data));
@@ -1783,6 +1819,7 @@ var FIREBASE_CONFIG = {
     return {id: was ? was.id : "draft", uid: myUid(), name: was ? was.name : myName(), grade: (was && was.grade) || "",
       dept: d.dept, cat: catOf(d.dept), head: d.head, lead: "", body: d.text, message: d.message,
       prepare: d.prepare, prepLabel: "준비할 것", future: d.future, size: d.size,
+      st: cleanStyle(d.style), color: cleanStyle(d.style).color || catOf(d.dept).color,
       photos: shots.map(function(x){ return {url: x.url || x.preview, cap: x.cap || ""}; })};
   }
   function readWriter(){
@@ -1803,6 +1840,7 @@ var FIREBASE_CONFIG = {
     $("wr-half").setAttribute("aria-pressed", mode === "half" ? "true" : "false");
     $("wr-full").setAttribute("aria-pressed", mode === "full" ? "true" : "false");
     $("wr-h").textContent = editingPost ? "지면에서 고치기" : "지면에서 쓰기";
+    drawDesign(mode);
     var stage = $("wr-stage");
     clear(stage);
     var pg = pageShell(cfg, "○", false);
@@ -1885,6 +1923,56 @@ var FIREBASE_CONFIG = {
     wr.dirty = true;
     drawWriter();
   }
+  /* 디자인 바꾸기 — 사진 위치 · 크기 · 모양, 기사 색 */
+  function setStyle(key, val){
+    readWriter();
+    var x = cleanStyle(wr.d.style);
+    if(val) x[key] = val; else delete x[key];
+    wr.d.style = cleanStyle(x);
+    wr.dirty = true;
+    drawWriter();
+  }
+  function chipRow(box, list, cur, key){
+    clear(box);
+    list.forEach(function(o){
+      var b = btn("chip", o[1], function(){ setStyle(key, o[0]); });
+      b.setAttribute("aria-pressed", (cur || "") === o[0] ? "true" : "false");
+      box.appendChild(b);
+    });
+  }
+  function drawDesign(mode){
+    var x = cleanStyle(wr.d.style);
+    chipRow($("wd-pos"), [["", "기본 (" + (mode === "half" ? "왼쪽" : "위") + ")"], ["left", "왼쪽"], ["right", "오른쪽"], ["top", "위"], ["bottom", "아래"]], x.pos, "pos");
+    chipRow($("wd-size"), [["s", "작게"], ["", "보통"], ["l", "크게"]], x.size, "size");
+    chipRow($("wd-fit"), [["", "꽉 채우기"], ["contain", "전체 보이기"]], x.fit, "fit");
+    var sw = $("wd-color");
+    clear(sw);
+    var au = btn("auto", "자동 (" + catOf(wr.d.dept).label + ")", function(){ setStyle("color", ""); });
+    au.setAttribute("aria-pressed", x.color ? "false" : "true");
+    sw.appendChild(au);
+    STYLE_COLORS.forEach(function(c){
+      var b = btn(null, null, function(){ setStyle("color", c[1]); });
+      b.style.background = c[1];
+      b.title = c[0];
+      b.setAttribute("aria-label", c[0]);
+      b.setAttribute("aria-pressed", x.color === c[1] ? "true" : "false");
+      sw.appendChild(b);
+    });
+    var on = Object.keys(x).length > 0;
+    $("wr-design-btn").textContent = on ? "디자인 바꾸기 ●" : "디자인 바꾸기";
+  }
+  $("wr-design-btn").addEventListener("click", function(){
+    var box = $("wr-design");
+    box.hidden = !box.hidden;
+    this.setAttribute("aria-expanded", box.hidden ? "false" : "true");
+    drawWriter();
+  });
+  $("wd-reset").addEventListener("click", function(){
+    readWriter();
+    wr.d.style = {};
+    wr.dirty = true;
+    drawWriter();
+  });
   $("wr-photo").addEventListener("change", function(e){ var f = e.target.files; if(f && f.length) writerAddPhotos(f); this.value = ""; });
   $("wr-half").addEventListener("click", function(){ readWriter(); wr.d.size = "half"; wr.dirty = true; drawWriter(); });
   $("wr-full").addEventListener("click", function(){ readWriter(); wr.d.size = "full"; wr.dirty = true; drawWriter(); });
@@ -1987,8 +2075,12 @@ var FIREBASE_CONFIG = {
     return n;
   }
   function buildArticle(a, mode, cfg, edit){
-    var art = mk("article", "np-art " + mode + (cfg.contain[a.id] ? " contain" : ""));
-    art.style.setProperty("--dc", a.cat.color);
+    var st = a.st || {};
+    var pos = st.pos || (mode === "half" ? "left" : "top");
+    var side = pos === "left" || pos === "right";
+    var k = st.size === "s" ? 0.75 : (st.size === "l" ? 1.3 : 1);
+    var art = mk("article", "np-art " + mode + " pos-" + pos + ((cfg.contain[a.id] || st.fit === "contain") ? " contain" : ""));
+    art.style.setProperty("--dc", a.color);
     art.setAttribute("data-id", a.id);
     var tag = mk("div", "np-tag");
     var dp = mk("span", "d", a.dept);
@@ -2013,10 +2105,15 @@ var FIREBASE_CONFIG = {
     var main = mk("div", "np-main");
     var photoBox = null;
     if(a.photos.length || edit){
-      photoBox = mk("div", "np-photos");
+      photoBox = mk("div", "np-photos " + (side ? "side" : "row"));
       var figs = a.photos.map(function(ph, i){ return figure(ph, i, i === 0 ? "main" : "sub", edit); });
       if(edit && a.photos.length < MAX_SHOTS) figs.push(addTile(a.photos.length ? "sub" : "main"));
-      if(mode === "half"){
+      if(side){
+        // 옆에 세로로: 큰 사진 한 장 + 나머지는 두 장씩
+        var half = mode === "half";
+        photoBox.style.setProperty("--pw", Math.round((half ? 58 : 76) * k));
+        photoBox.style.setProperty("--hm", Math.round((half ? 40 : 60) * k));
+        photoBox.style.setProperty("--hsub", Math.round((half ? 20 : 30) * k));
         photoBox.appendChild(figs[0]);
         if(figs.length > 1){
           var subs = mk("div", "np-subs");
@@ -2024,11 +2121,12 @@ var FIREBASE_CONFIG = {
           photoBox.appendChild(subs);
         }
       } else {
+        // 위 · 아래 가로 한 줄: 4장은 한 줄에, 5장 이상은 세 장씩
         var n = figs.length;
-        var base = !a.photos.length ? 34 : (mode === "front" ? (n === 1 ? 54 : (n === 2 ? 46 : 38)) : (n === 1 ? 62 : (n === 2 ? 54 : (n === 3 ? 44 : 38))));
-        photoBox.style.setProperty("--ph", base);
+        var base = mode === "half" ? (n === 1 ? 40 : 32)
+          : (!a.photos.length ? 34 : (mode === "front" ? (n === 1 ? 54 : (n === 2 ? 46 : 38)) : (n === 1 ? 62 : (n === 2 ? 54 : (n === 3 ? 44 : 38)))));
+        photoBox.style.setProperty("--ph", Math.round(base * k));
         figs.forEach(function(f){
-          // 4장은 한 줄에, 5장 이상은 세 장씩
           if(n === 4) f.style.flex = "0 0 calc((100% - " + 3 * 2.6 + " * var(--u)) / 4)";
           else if(n >= 5) f.style.flex = "0 0 calc((100% - " + 2 * 2.6 + " * var(--u)) / 3)";
           photoBox.appendChild(f);
@@ -2119,7 +2217,7 @@ var FIREBASE_CONFIG = {
   // 사진이 많으면 사진 높이를 조금씩 줄여 봅니다(사진은 빼지 않습니다)
   function fitWithPhotos(b){
     if(fitSize(b)) return true;
-    if(!b.photos || b.mode === "half") return false;
+    if(!b.photos || b.mode === "half" || !b.photos.classList.contains("row")) return false;
     var base = parseFloat(b.photos.style.getPropertyValue("--ph")) || 60;
     var steps = [0.82, 0.68, 0.56];
     for(var i = 0; i < steps.length; i++){
@@ -2154,7 +2252,7 @@ var FIREBASE_CONFIG = {
   }
   function buildCont(a, text, cfg){
     var art = mk("article", "np-art cont");
-    art.style.setProperty("--dc", a.cat.color);
+    art.style.setProperty("--dc", a.color);
     var h = mk("div", "np-cont-head", "앞 면에서 이어짐");
     h.appendChild(mk("b", null, a.head));
     art.appendChild(h);
@@ -2176,7 +2274,7 @@ var FIREBASE_CONFIG = {
     };
     arts.filter(function(a){ return a.lead || a.message; }).slice(0, 8).forEach(function(a){
       var d = mk("div", "np-quote", "“" + (a.lead || oneLine(a.message)) + "”");
-      d.style.setProperty("--dc", a.cat.color);
+      d.style.setProperty("--dc", a.color);
       d.appendChild(mk("b", null, a.dept + " · " + a.name));
       q.appendChild(d);
     });
@@ -2318,7 +2416,7 @@ var FIREBASE_CONFIG = {
     var crew = mk("div", "np-crew");
     arts.forEach(function(a){
       var d = mk("div");
-      d.style.setProperty("--dc", a.cat.color);
+      d.style.setProperty("--dc", a.color);
       d.appendChild(mk("b", null, a.name));
       d.appendChild(mk("span", null, a.dept));
       d.appendChild(mk("small", null, "「" + a.head + "」 " + (placed[a.id] || "") + "면"));
@@ -2342,7 +2440,7 @@ var FIREBASE_CONFIG = {
     var ordered = arts.slice().sort(function(x, y){ return (placed[x.id] || 99) - (placed[y.id] || 99); });
     ordered.forEach(function(a){
       var li = mk("li");
-      li.style.setProperty("--dc", a.cat.color);
+      li.style.setProperty("--dc", a.color);
       li.appendChild(mk("i"));
       li.appendChild(mk("span", null, a.dept + " · " + a.name));
       li.appendChild(mk("b", null, (placed[a.id] || "") + "면"));
