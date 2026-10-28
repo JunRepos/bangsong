@@ -2669,6 +2669,15 @@ var FIREBASE_CONFIG = {
       }));
     }
     s2.appendChild(ct);
+    // 코드가 없을 때는 눈에 띄는 큰 버튼으로
+    if(!State.code){
+      var mk = el("button", "btn rec", "코드 만들기");
+      mk.type = "button";
+      mk.style.marginTop = "10px";
+      mk.addEventListener("click", function(){ ct.firstChild.click(); });
+      ct.hidden = true;
+      s2.appendChild(mk);
+    }
     v.appendChild(s2);
 
     // 부원 명단 — 학번 가입은 이 명단과 이름이 맞아야 됩니다
