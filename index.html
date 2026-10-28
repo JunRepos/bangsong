@@ -171,6 +171,11 @@
   /* ── 상세 */
   .back{border:0; background:transparent; color:var(--ink-2); font-size:13.5px; font-weight:600; padding:6px 0; cursor:pointer; display:inline-flex; align-items:center; gap:4px}
   .detail-head{display:flex; flex-direction:column; gap:8px; padding-bottom:6px}
+  .paper-desk{display:flex; flex-direction:column; gap:3px; margin:6px 0 4px; padding:14px 16px; border-radius:14px; text-decoration:none; color:#15140F;
+    background:var(--k-paper); box-shadow:0 6px 18px rgba(242,201,76,.18)}
+  .paper-desk b{font-size:16px}
+  .paper-desk b::after{content:" ›"}
+  .paper-desk span{font-size:12.5px; opacity:.8}
   .detail-title{font-family:var(--display); font-weight:400; font-size:28px; line-height:1.2; margin:0; word-break:break-word}
   .detail-log{font-size:14px; color:var(--ink-2); margin:0; line-height:1.6}
   .when-big{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
@@ -1445,7 +1450,8 @@ var FIREBASE_CONFIG = {
       credits: Array.isArray(v.credits) ? v.credits : [], crew: Array.isArray(v.crew) ? v.crew : [],
       links: Array.isArray(v.links) ? v.links : [], files: Array.isArray(v.files) ? v.files : [],
       photos: Array.isArray(v.photos) ? v.photos : [],
-      by:v.by || "", byUid:v.byUid || "", createdAt:v.createdAt || 0, updatedAt:v.updatedAt || 0
+      by:v.by || "", byUid:v.byUid || "", createdAt:v.createdAt || 0, updatedAt:v.updatedAt || 0,
+      paper: v.paper || null
     };
   }
 
@@ -1714,7 +1720,7 @@ var FIREBASE_CONFIG = {
       .sort(function(a, b){ return (a.createdAt||0) - (b.createdAt||0); });
   }
   function commentsOf(prodId){
-    return State.comments.filter(function(x){ return x.prodId === prodId; })
+    return State.comments.filter(function(x){ return x.prodId === prodId && !x.itemId; })
       .sort(function(a, b){ return (a.createdAt||0) - (b.createdAt||0); });
   }
   // 같은 이름으로 여러 기기에서 들어오면 가장 최근 기기 하나만 고르개에 보입니다.
@@ -2752,6 +2758,15 @@ var FIREBASE_CONFIG = {
     head.appendChild(wb);
     wrap.appendChild(head);
 
+    // 신문 — 칼럼 보드 · 지면 · PDF 는 신문 편집국에서
+    if(p.kind === "paper" && p.status === "go"){
+      var pe = el("a", "paper-desk");
+      pe.href = paperUrl(p);
+      pe.appendChild(el("b", null, "신문 편집국 열기"));
+      pe.appendChild(el("span", null, "칼럼 보드 · 신문 지면 보기 · 디자인 편집 · PDF"));
+      wrap.appendChild(pe);
+    }
+
     // 기획안 — 선생님이 채택하거나 돌려보냅니다
     if(p.status === "pitch"){
       var ps = el("section");
@@ -3349,13 +3364,15 @@ var FIREBASE_CONFIG = {
     btn.disabled = true;
     pMedia.upload(id, function(what, n){ btn.textContent = what + " 올리는 중 " + n; }).then(function(m){
       btn.textContent = "저장 중…";
-      return withPatience(put("bcProds", id, {
+      var data = {
         kind: pickKind, title: title, logline: $("p-log").value.trim(), body: $("p-body").value.trim(),
         date: getDate("p-date"), time: time, stage: was ? was.stage : 0, status: status,
         credits: credits, crew: crew, links: lk.links, files: m.files, photos: m.photos,
         by: was ? was.by : myName(), byUid: was ? was.byUid : myUid(),
         createdAt: was ? (was.createdAt || Date.now()) : Date.now(), updatedAt: Date.now()
-      }));
+      };
+      if(was && was.paper) data.paper = was.paper;
+      return withPatience(put("bcProds", id, data));
     }).then(function(how){
       pMedia.reset();
       closeSheets();
@@ -3393,8 +3410,10 @@ var FIREBASE_CONFIG = {
       box.appendChild(c);
     });
   }
+  function paperUrl(p, extra){ return "paper.html?id=" + encodeURIComponent(p.id) + (extra || ""); }
   function openItem(p, x){
     if(!canWrite()){ openLogin("member"); return; }
+    if(p.kind === "paper" && p.status === "go"){ location.href = paperUrl(p, "&write=1"); return; }
     itemProd = p;
     editingItem = x;
     var roles = myCredits(p).map(function(c){ return c.role; });
@@ -3424,12 +3443,16 @@ var FIREBASE_CONFIG = {
     btn.disabled = true;
     iMedia.upload(id, function(what, n){ btn.textContent = what + " 올리는 중 " + n; }).then(function(m){
       btn.textContent = "올리는 중…";
-      return withPatience(put("bcItems", id, {
+      var data = {};
+      if(was) Object.keys(was).forEach(function(k){ if(k !== "id") data[k] = was[k]; });
+      var fresh = {
         prodId: itemProd.id, uid: was ? was.uid : myUid(), name: was ? was.name : myName(),
         role: was ? was.role : myCredits(itemProd).map(function(c){ return c.role; }).join("·"),
         label: itemLabel, text: text, link: link, files: m.files, photos: m.photos,
         createdAt: was ? (was.createdAt || Date.now()) : Date.now(), updatedAt: Date.now()
-      }));
+      };
+      Object.keys(fresh).forEach(function(k){ data[k] = fresh[k]; });
+      return withPatience(put("bcItems", id, data));
     }).then(function(how){
       iMedia.reset();
       closeSheets();
