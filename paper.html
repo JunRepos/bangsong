@@ -256,7 +256,7 @@
   .np-art.full .np-fig .im, .np-art.front .np-fig .im{height:calc(var(--ph, 70) * var(--u))}
   .np-text{flex:1; min-width:0; min-height:0; display:flex; flex-direction:column}
   .np-body{flex:1; min-height:0; font-family:var(--serif); font-size:calc(var(--fs) * var(--u)); line-height:1.72; text-align:justify; word-break:normal; line-break:strict;
-    overflow-wrap:anywhere; column-gap:calc(5 * var(--u)); column-rule:calc(.2 * var(--u)) solid rgba(0,0,0,.15); column-fill:auto; overflow:hidden}
+    overflow-wrap:anywhere; column-gap:calc(5 * var(--u)); column-rule:calc(.2 * var(--u)) solid rgba(0,0,0,.15); column-fill:balance; overflow:hidden}
   .np-art.half .np-body{columns:2}
   .np-art.full .np-body, .np-art.cont .np-body{columns:3}
   .np-art.front .np-body{columns:3}
@@ -1776,7 +1776,9 @@ var FIREBASE_CONFIG = {
         photoBox.style.setProperty("--ph", base);
         a.photos.forEach(function(ph, i){
           var f = figure(ph, i, i === 0 ? "main" : "sub");
-          if(n >= 4) f.style.flex = "0 0 calc((100% - " + 2 * 2.6 + " * var(--u)) / 3)";
+          // 4장은 한 줄에, 5장 이상은 세 장씩
+          if(n === 4) f.style.flex = "0 0 calc((100% - " + 3 * 2.6 + " * var(--u)) / 4)";
+          else if(n >= 5) f.style.flex = "0 0 calc((100% - " + 2 * 2.6 + " * var(--u)) / 3)";
           photoBox.appendChild(f);
         });
       }
