@@ -116,6 +116,7 @@
   .cmt-form button{border:0; background:var(--ink); color:var(--bg); border-radius:9px; padding:0 15px; font-size:13px; font-weight:700; cursor:pointer}
 
   /* ── 입력 · 시트 */
+  .lg-modes{display:flex; gap:6px; margin:2px 0 10px}
   .field{margin-bottom:13px}
   .field > label{display:block; font-size:12.5px; font-weight:600; color:var(--ink-2); margin-bottom:5px}
   .field input[type=text], .field input[type=email], .field input[type=password], .field textarea, .field select{
@@ -344,20 +345,27 @@
 <div class="sheet" id="sheet-login" role="dialog" aria-modal="true" aria-labelledby="lg-title">
   <h2 id="lg-title">편집국 입장</h2>
   <div id="lg-choose">
-    <p class="lead">부원은 방송부 코드로, 선생님은 계정으로 들어옵니다. 방송부 사이트에서 이미 들어왔다면 그대로 이어집니다.</p>
+    <p class="lead">부원은 학번과 비밀번호로 들어옵니다(처음 한 번은 가입). 방송부 사이트에서 이미 들어왔다면 그대로 이어집니다.</p>
     <div class="sheet-actions">
       <button type="button" class="btn" id="lg-go-teacher">선생님</button>
       <button type="button" class="btn rec" id="lg-go-member">부원</button>
     </div>
   </div>
   <div id="lg-member" hidden>
-    <p class="lead">선생님이 알려 준 코드 여섯 자리와 이름을 넣어 주세요.</p>
-    <div class="field"><label for="l-code">방송부 코드</label><input type="text" id="l-code" autocomplete="off" maxlength="6" style="text-transform:uppercase; letter-spacing:.16em; font-family:var(--mono)"></div>
-    <div class="field"><label for="l-name">이름</label><input type="text" id="l-name" autocomplete="off" placeholder="예) 김하늘"></div>
+    <div class="lg-modes" role="group" aria-label="로그인 또는 가입">
+      <button type="button" class="chip" id="lg-mode-in" aria-pressed="true">로그인</button>
+      <button type="button" class="chip" id="lg-mode-up" aria-pressed="false">처음이에요 (가입)</button>
+    </div>
+    <p class="lead" id="lg-member-lead">학번과 비밀번호로 들어옵니다. 휴대폰 · 컴퓨터 어디서든 같습니다.</p>
+    <div class="field"><label for="l-sid">학번</label><input type="text" id="l-sid" inputmode="numeric" autocomplete="username" maxlength="8" placeholder="예) 20601"></div>
+    <div class="field" data-up hidden><label for="l-name">이름</label><input type="text" id="l-name" autocomplete="off" placeholder="예) 김하늘"></div>
+    <div class="field" data-up hidden><label for="l-code">방송부 코드 (처음 한 번만)</label><input type="text" id="l-code" autocomplete="off" maxlength="6" style="text-transform:uppercase; letter-spacing:.16em; font-family:var(--mono)"></div>
+    <div class="field"><label for="l-pass">비밀번호</label><input type="password" id="l-pass" autocomplete="current-password"></div>
+    <div class="field" data-up hidden><label for="l-pass2">비밀번호 확인</label><input type="password" id="l-pass2" autocomplete="new-password"></div>
     <p class="form-err" id="lg-member-err" hidden></p>
     <div class="sheet-actions">
       <button type="button" class="btn" data-close>취소</button>
-      <button type="button" class="btn rec" id="lg-member-go">입장</button>
+      <button type="button" class="btn rec" id="lg-member-go">로그인</button>
     </div>
   </div>
   <div id="lg-teacher" hidden>
@@ -1078,9 +1086,9 @@ var FIREBASE_CONFIG = {
         State.cloud = true;
         FB.auth.onAuthStateChanged(function(u){
           State.user = u;
-          State.teacher = !!u && !u.isAnonymous;
+          State.teacher = !!u && !isStudentUser(u);
           if(unsubMe){ unsubMe(); unsubMe = null; }
-          if(u && u.isAnonymous) watchMe(u.uid);
+          if(u && !State.teacher) watchMe(u.uid);
           else if(!u){ State.me = null; lsSet("bs.me", null); }
           startGated();
           render();
@@ -1110,7 +1118,7 @@ var FIREBASE_CONFIG = {
       render();
     }, watchErr));
     gated.push(FB.db.collection("bcMembers").onSnapshot(function(snap){
-      State.members = snap.docs.map(function(d){ var v = d.data() || {}; return {uid:d.id, name:v.name || "", joinedAt:v.joinedAt || 0}; });
+      State.members = snap.docs.map(function(d){ var v = d.data() || {}; return {uid:d.id, name:v.name || "", sid:v.sid || "", joinedAt:v.joinedAt || 0}; });
       render();
     }, watchErr));
   }
@@ -1118,7 +1126,7 @@ var FIREBASE_CONFIG = {
     unsubMe = FB.db.collection("bcMembers").doc(uidStr).onSnapshot(function(doc){
       if(doc.exists){
         var v = doc.data() || {};
-        State.me = {uid: uidStr, name: v.name || (State.me && State.me.name) || ""};
+        State.me = {uid: uidStr, name: v.name || (State.me && State.me.name) || "", sid: v.sid || ""};
       } else State.me = null;
       lsSet("bs.me", State.me);
       startGated();
@@ -2442,8 +2450,12 @@ var FIREBASE_CONFIG = {
     $("lg-teacher").hidden = which !== "teacher";
     $("lg-err").hidden = true;
     $("lg-member-err").hidden = true;
+    if(which === "member"){
+      ["l-sid", "l-name", "l-code", "l-pass", "l-pass2"].forEach(function(id){ $(id).value = ""; });
+      setMemberMode("in");
+    }
     openSheet("sheet-login");
-    if(which === "member") setTimeout(function(){ $("l-code").focus(); }, 200);
+    if(which === "member") setTimeout(function(){ $("l-sid").focus(); }, 200);
   }
   $("who-btn").addEventListener("click", function(){
     if(State.teacher){
@@ -2452,7 +2464,13 @@ var FIREBASE_CONFIG = {
       else { State.teacher = false; lsSet("bs.teacherMode", false); render(); }
       return;
     }
-    if(State.me){ toast(State.me.name + " 님으로 들어와 있어요"); return; }
+    if(State.me){
+      if(!window.confirm(State.me.name + " 님, 로그아웃할까요? 컴퓨터실 공용 컴퓨터라면 꼭 로그아웃해 주세요.")) return;
+      if(State.cloud && FB.auth.currentUser) FB.auth.signOut();
+      State.me = null; lsSet("bs.me", null); render();
+      toast("로그아웃했습니다");
+      return;
+    }
     openLogin(null);
   });
   $("lg-go-teacher").addEventListener("click", function(){ openLogin("teacher"); });
@@ -2463,37 +2481,122 @@ var FIREBASE_CONFIG = {
       .then(function(){ closeSheets(); toast("로그인했습니다"); })
       ["catch"](function(){ showErr("lg-err", "이메일 또는 비밀번호가 맞지 않습니다."); });
   });
-  $("lg-member-go").addEventListener("click", function(){
-    var code = $("l-code").value.trim().toUpperCase(), name = $("l-name").value.trim();
+  /* ---------------- 부원 로그인: 학번 + 비밀번호 ----------------
+     처음 한 번만 가입합니다(학번 · 이름 · 방송부 코드 · 비밀번호). 이름은 선생님 명단과 맞아야 합니다.
+     그다음부터는 휴대폰이든 컴퓨터실이든 학번과 비밀번호로 들어옵니다.
+     Firebase 계정 이메일은 학번으로 만듭니다(실제로 메일이 가지는 않습니다). */
+  var memberMode = "in";
+  function mailOf(sid){ return "bc" + sid + "@example.com"; }
+  function isStudentUser(u){ return !!u && (u.isAnonymous || /^bc\d+@example\.com$/.test(u.email || "")); }
+  function setMemberMode(m){
+    memberMode = m;
+    $("lg-mode-in").setAttribute("aria-pressed", m === "in" ? "true" : "false");
+    $("lg-mode-up").setAttribute("aria-pressed", m === "up" ? "true" : "false");
+    Array.prototype.forEach.call(document.querySelectorAll("#lg-member [data-up]"), function(n){ n.hidden = m !== "up"; });
+    $("lg-member-lead").textContent = m === "up"
+      ? "처음 한 번만 합니다. 이름은 선생님 명단과 똑같이, 비밀번호는 내가 정합니다(6자 이상)."
+      : "학번과 비밀번호로 들어옵니다. 휴대폰 · 컴퓨터 어디서든 같습니다.";
+    $("l-pass").setAttribute("autocomplete", m === "up" ? "new-password" : "current-password");
+    $("lg-member-go").textContent = m === "up" ? "가입하고 들어가기" : "로그인";
     $("lg-member-err").hidden = true;
-    if(code.length !== 6){ showErr("lg-member-err", "코드 여섯 자리를 넣어 주세요."); return; }
-    if(!name){ showErr("lg-member-err", "이름을 넣어 주세요."); return; }
-    var b = $("lg-member-go");
+  }
+  $("lg-mode-in").addEventListener("click", function(){ setMemberMode("in"); });
+  $("lg-mode-up").addEventListener("click", function(){ setMemberMode("up"); });
+  function memberErr(e){
+    var c = (e && e.code) || "";
+    if(c === "auth/invalid-credential" || c === "auth/invalid-login-credentials" || c === "auth/wrong-password" || c === "auth/user-not-found")
+      return "학번 또는 비밀번호가 맞지 않습니다.\n처음이면 위의 ‘처음이에요’를 눌러 가입해 주세요.";
+    if(c === "bc/nomember") return "가입이 끝나지 않은 학번입니다. ‘처음이에요’에서 같은 비밀번호로 다시 가입해 주세요.";
+    if(c === "bc/taken") return "이미 가입된 학번입니다. 비밀번호를 잊었다면 선생님께 말씀해 주세요.";
+    if(c === "bc/roster") return "학번 · 이름 · 방송부 코드 중에 맞지 않는 것이 있습니다.\n이름은 선생님 명단과 똑같이 적어 주세요.";
+    if(c === "auth/too-many-requests") return "여러 번 틀려서 잠시 막혔습니다. 조금 뒤에 다시 해 주세요.";
+    if(c === "auth/weak-password") return "비밀번호는 6자 이상으로 정해 주세요.";
+    if(c === "auth/operation-not-allowed") return "Firebase 콘솔에서 ‘이메일/비밀번호’ 로그인을 켜야 합니다.";
+    if(c === "auth/network-request-failed") return "인터넷 연결을 확인해 주세요.";
+    return errText(e);
+  }
+  function enterAs(me){
+    State.me = me;
+    lsSet("bs.me", me);
+    if(State.cloud){
+      if(unsubMe){ unsubMe(); unsubMe = null; }
+      watchMe(me.uid);
+    }
+    closeSheets();
+    toast(me.name + " 님, 어서 오세요");
+    render();
+  }
+  $("lg-member-go").addEventListener("click", function(){
+    var sid = $("l-sid").value.replace(/\s/g, ""), pw = $("l-pass").value;
+    var up = memberMode === "up";
+    var name = $("l-name").value.trim(), code = $("l-code").value.trim().toUpperCase();
+    $("lg-member-err").hidden = true;
+    if(!/^\d{3,8}$/.test(sid)){ showErr("lg-member-err", "학번을 숫자로 넣어 주세요. 예) 20601"); return; }
+    if(up && !name){ showErr("lg-member-err", "이름을 넣어 주세요."); return; }
+    if(up && code.length !== 6){ showErr("lg-member-err", "방송부 코드 여섯 자리를 넣어 주세요."); return; }
+    if(pw.length < 6){ showErr("lg-member-err", "비밀번호는 6자 이상입니다."); return; }
+    if(up && pw !== $("l-pass2").value){ showErr("lg-member-err", "비밀번호 확인이 다릅니다."); return; }
+    var b = $("lg-member-go"), label = b.textContent;
     b.disabled = true;
+    b.textContent = up ? "가입 중…" : "들어가는 중…";
+    function done(){ b.disabled = false; b.textContent = label; }
+
     if(!State.cloud){
-      var demoCode = lsGet("bs.code");
-      if(demoCode && demoCode !== code){ showErr("lg-member-err", "코드가 맞지 않습니다."); b.disabled = false; return; }
-      State.me = {uid: CLIENT, name: name};
-      lsSet("bs.me", State.me);
-      State.members = State.members.filter(function(m){ return m.uid !== CLIENT; });
-      State.members.push({uid: CLIENT, name: name, joinedAt: Date.now()});
-      Local.save();
-      closeSheets(); b.disabled = false; render();
+      // 데모: 이 기기에만 계정을 둡니다
+      var acc = lsGet("bs.accounts") || {}, roster = lsGet("bs.roster") || [], demoCode = lsGet("bs.code");
+      if(up){
+        var row = roster.filter(function(r){ return r.sid === sid; })[0];
+        if(acc[sid]){ showErr("lg-member-err", memberErr({code:"bc/taken"})); done(); return; }
+        if((roster.length && (!row || row.name !== name)) || (demoCode && demoCode !== code)){ showErr("lg-member-err", memberErr({code:"bc/roster"})); done(); return; }
+        acc[sid] = {pw: pw, name: name, uid: "d" + sid};
+        lsSet("bs.accounts", acc);
+        State.members = State.members.filter(function(m){ return m.uid !== "d" + sid; });
+        State.members.push({uid: "d" + sid, name: name, sid: sid, joinedAt: Date.now()});
+        Local.save();
+      } else if(!acc[sid] || acc[sid].pw !== pw){
+        showErr("lg-member-err", memberErr({code:"auth/invalid-credential"})); done(); return;
+      }
+      enterAs({uid: acc[sid].uid, name: acc[sid].name, sid: sid});
+      done();
       return;
     }
-    FB.auth.signInAnonymously().then(function(cred){
-      var u = cred.user;
-      return FB.db.collection("bcMembers").doc(u.uid).set({code: code, name: name, joinedAt: Date.now()}).then(function(){
-        State.me = {uid: u.uid, name: name};
-        lsSet("bs.me", State.me);
-        if(unsubMe){ unsubMe(); unsubMe = null; }
-        watchMe(u.uid);
+
+    var email = mailOf(sid);
+    var memberDoc = function(u){ return FB.db.collection("bcMembers").doc(u.uid); };
+    var work;
+    if(!up){
+      work = FB.auth.signInWithEmailAndPassword(email, pw).then(function(c){
+        return memberDoc(c.user).get().then(function(doc){
+          if(!doc.exists){ return FB.auth.signOut().then(function(){ throw {code:"bc/nomember"}; }); }
+          return {uid: c.user.uid, name: (doc.data() || {}).name || "", sid: sid};
+        });
       });
-    }).then(function(){ closeSheets(); toast(name + " 님, 편집국에 오신 걸 환영합니다"); render(); })
-      ["catch"](function(e){
-        showErr("lg-member-err", (e && e.code === "permission-denied") ? "코드가 맞지 않습니다. 선생님께 다시 확인해 주세요."
-          : ((e && e.code === "auth/operation-not-allowed") ? "Firebase 콘솔에서 ‘익명’ 로그인을 켜야 합니다." : errText(e)));
-      })["then"](function(){ b.disabled = false; });
+    } else {
+      var fresh = false, cur = FB.auth.currentUser;
+      var cred = firebase.auth.EmailAuthProvider.credential(email, pw);
+      // 오늘 코드로 들어와 있던 기기면 그 계정을 학번 계정으로 바꿔서, 이미 올린 글이 그대로 내 것으로 남습니다
+      var make = (cur && cur.isAnonymous) ? cur.linkWithCredential(cred)
+        : FB.auth.createUserWithEmailAndPassword(email, pw).then(function(c){ fresh = true; return c; });
+      work = make["catch"](function(e){
+        var c = (e && e.code) || "";
+        if(c === "auth/email-already-in-use" || c === "auth/credential-already-in-use" || c === "auth/provider-already-linked"){
+          // 가입하다 멈췄던 계정이면 같은 비밀번호로 이어서 마칩니다
+          return FB.auth.signInWithEmailAndPassword(email, pw)["catch"](function(){ throw {code:"bc/taken"}; });
+        }
+        throw e;
+      }).then(function(c){
+        var u = c.user;
+        return memberDoc(u).set({sid: sid, name: name, code: code, joinedAt: Date.now()}).then(function(){
+          return {uid: u.uid, name: name, sid: sid};
+        }, function(e){
+          var why = (e && e.code === "permission-denied") ? {code:"bc/roster"} : e;
+          // 명단이나 코드가 맞지 않으면 방금 만든 계정은 지워서 다시 가입할 수 있게 합니다
+          var undo = fresh ? u["delete"]() : FB.auth.signOut();
+          return undo["catch"](function(){}).then(function(){ throw why; });
+        });
+      });
+    }
+    work.then(function(me){ enterAs(me); })["catch"](function(e){ showErr("lg-member-err", memberErr(e)); })["then"](done);
   });
 
   /* 화면 폭이 바뀌면 지면 크기를 다시 맞춥니다 */
