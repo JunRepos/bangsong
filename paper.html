@@ -2482,7 +2482,7 @@ var FIREBASE_CONFIG = {
       ["catch"](function(){ showErr("lg-err", "이메일 또는 비밀번호가 맞지 않습니다."); });
   });
   /* ---------------- 부원 로그인: 학번 + 비밀번호 ----------------
-     처음 한 번만 가입합니다(학번 · 이름 · 방송부 코드 · 비밀번호). 이름은 선생님 명단과 맞아야 합니다.
+     처음 한 번만 가입합니다(학번 · 이름 · 방송부 코드 · 비밀번호). 가입하면 선생님 스튜디오에 바로 뜹니다.
      그다음부터는 휴대폰이든 컴퓨터실이든 학번과 비밀번호로 들어옵니다.
      Firebase 계정 이메일은 학번으로 만듭니다(실제로 메일이 가지는 않습니다). */
   var memberMode = "in";
@@ -2494,7 +2494,7 @@ var FIREBASE_CONFIG = {
     $("lg-mode-up").setAttribute("aria-pressed", m === "up" ? "true" : "false");
     Array.prototype.forEach.call(document.querySelectorAll("#lg-member [data-up]"), function(n){ n.hidden = m !== "up"; });
     $("lg-member-lead").textContent = m === "up"
-      ? "처음 한 번만 합니다. 이름은 선생님 명단과 똑같이, 비밀번호는 내가 정합니다(6자 이상)."
+      ? "처음 한 번만 합니다. 이름은 실명으로, 비밀번호는 내가 정합니다(6자 이상)."
       : "학번과 비밀번호로 들어옵니다. 휴대폰 · 컴퓨터 어디서든 같습니다.";
     $("l-pass").setAttribute("autocomplete", m === "up" ? "new-password" : "current-password");
     $("lg-member-go").textContent = m === "up" ? "가입하고 들어가기" : "로그인";
@@ -2508,7 +2508,7 @@ var FIREBASE_CONFIG = {
       return "학번 또는 비밀번호가 맞지 않습니다.\n처음이면 위의 ‘처음이에요’를 눌러 가입해 주세요.";
     if(c === "bc/nomember") return "가입이 끝나지 않은 학번입니다. ‘처음이에요’에서 같은 비밀번호로 다시 가입해 주세요.";
     if(c === "bc/taken") return "이미 가입된 학번입니다. 비밀번호를 잊었다면 선생님께 말씀해 주세요.";
-    if(c === "bc/roster") return "학번 · 이름 · 방송부 코드 중에 맞지 않는 것이 있습니다.\n이름은 선생님 명단과 똑같이 적어 주세요.";
+    if(c === "bc/code") return "방송부 코드가 맞지 않습니다. 선생님께 다시 확인해 주세요.";
     if(c === "auth/too-many-requests") return "여러 번 틀려서 잠시 막혔습니다. 조금 뒤에 다시 해 주세요.";
     if(c === "auth/weak-password") return "비밀번호는 6자 이상으로 정해 주세요.";
     if(c === "auth/operation-not-allowed") return "Firebase 콘솔에서 ‘이메일/비밀번호’ 로그인을 켜야 합니다.";
@@ -2543,11 +2543,10 @@ var FIREBASE_CONFIG = {
 
     if(!State.cloud){
       // 데모: 이 기기에만 계정을 둡니다
-      var acc = lsGet("bs.accounts") || {}, roster = lsGet("bs.roster") || [], demoCode = lsGet("bs.code");
+      var acc = lsGet("bs.accounts") || {}, demoCode = lsGet("bs.code");
       if(up){
-        var row = roster.filter(function(r){ return r.sid === sid; })[0];
         if(acc[sid]){ showErr("lg-member-err", memberErr({code:"bc/taken"})); done(); return; }
-        if((roster.length && (!row || row.name !== name)) || (demoCode && demoCode !== code)){ showErr("lg-member-err", memberErr({code:"bc/roster"})); done(); return; }
+        if(demoCode && demoCode !== code){ showErr("lg-member-err", memberErr({code:"bc/code"})); done(); return; }
         acc[sid] = {pw: pw, name: name, uid: "d" + sid};
         lsSet("bs.accounts", acc);
         State.members = State.members.filter(function(m){ return m.uid !== "d" + sid; });
@@ -2589,8 +2588,8 @@ var FIREBASE_CONFIG = {
         return memberDoc(u).set({sid: sid, name: name, code: code, joinedAt: Date.now()}).then(function(){
           return {uid: u.uid, name: name, sid: sid};
         }, function(e){
-          var why = (e && e.code === "permission-denied") ? {code:"bc/roster"} : e;
-          // 명단이나 코드가 맞지 않으면 방금 만든 계정은 지워서 다시 가입할 수 있게 합니다
+          var why = (e && e.code === "permission-denied") ? {code:"bc/code"} : e;
+          // 코드가 맞지 않으면 방금 만든 계정은 지워서 다시 가입할 수 있게 합니다
           var undo = fresh ? u["delete"]() : FB.auth.signOut();
           return undo["catch"](function(){}).then(function(){ throw why; });
         });
