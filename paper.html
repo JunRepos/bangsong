@@ -160,6 +160,32 @@
   .np-bar .sp{flex:1}
   .np-stage{display:flex; flex-direction:column; align-items:center; gap:22px}
   .np-holder{position:relative; box-shadow:0 18px 50px rgba(0,0,0,.55)}
+  /* 지면에서 쓰기 */
+  #np-writer{position:fixed; inset:0; z-index:70; background:#16181E; display:none; flex-direction:column}
+  #np-writer.open{display:flex}
+  .wr-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 16px; border-bottom:1px solid var(--rule); background:var(--bg)}
+  .wr-top h2{margin:0 6px 0 0; font-family:var(--display); font-weight:400; font-size:19px}
+  .wr-top .sp{flex:1}
+  .wr-top label.btn{cursor:pointer}
+  .wr-status{padding:9px 16px; font-size:13.5px; font-weight:600; color:var(--muted); background:var(--bg); border-bottom:1px solid var(--rule)}
+  .wr-status.ok{color:#3ECF8E} .wr-status.warn{color:#F2C94C} .wr-status.bad{color:var(--onair)}
+  #wr-stage{flex:1; overflow:auto; padding:22px 16px 80px; display:flex; flex-direction:column; align-items:center}
+  .ed-live [data-f]{outline:calc(.3 * var(--u)) dashed rgba(200,16,46,.45); outline-offset:calc(.6 * var(--u)); cursor:text; min-width:calc(12 * var(--u))}
+  .ed-live [data-f]:focus{outline:calc(.45 * var(--u)) solid var(--accent); background:rgba(255,255,255,.75)}
+  .ed-live .np-tag .d[data-f]:focus{background:var(--dc)}
+  .ed-live [data-ph]:empty::before{content:attr(data-ph); color:#A39E92; font-weight:400; font-style:normal}
+  .ed-live .np-tag .d[data-ph]:empty::before{color:rgba(255,255,255,.9)}
+  .ed-live .np-body[data-f]{min-height:calc(20 * var(--u))}
+  .ed-live .np-fig .im{position:relative}
+  .np-x{position:absolute; top:calc(1.4 * var(--u)); right:calc(1.4 * var(--u)); width:calc(6.5 * var(--u)); height:calc(6.5 * var(--u)); border-radius:50%; border:0;
+    background:rgba(0,0,0,.7); color:#fff; font-size:calc(3 * var(--u)); line-height:1; cursor:pointer}
+  .np-add .im{border:calc(.5 * var(--u)) dashed var(--dc); background:transparent; flex-direction:column; gap:calc(1 * var(--u)); cursor:pointer; color:var(--dc);
+    font-family:"IBM Plex Sans KR", sans-serif; font-weight:700; font-size:calc(3.4 * var(--u)); box-sizing:border-box}
+  .np-add .im small{font-size:calc(2.3 * var(--u)); font-weight:400; color:var(--muted-np)}
+  .np-add .im:hover{background:rgba(0,0,0,.03)}
+  .np-slotph{flex:1; margin-top:calc(4 * var(--u)); border:calc(.4 * var(--u)) dashed rgba(0,0,0,.22); border-radius:calc(2 * var(--u)); display:flex; align-items:center;
+    justify-content:center; color:#A39E92; font-family:"IBM Plex Sans KR", sans-serif; font-size:calc(3.4 * var(--u))}
+  .size-pick{display:flex; gap:8px; flex-wrap:wrap}
   .np-holder > .np-page{position:absolute; top:0; left:0; transform-origin:0 0}
   .np-pagenum{font-family:var(--mono); font-size:11.5px; color:var(--muted); text-align:center; margin-top:6px}
   .np-measure{position:absolute; left:-30000px; top:0; visibility:hidden; pointer-events:none}
@@ -258,8 +284,13 @@
   .np-body{flex:1; min-height:0; font-family:var(--serif); font-size:calc(var(--fs) * var(--u)); line-height:1.72; text-align:justify; word-break:normal; line-break:strict;
     overflow-wrap:anywhere; column-gap:calc(5 * var(--u)); column-rule:calc(.2 * var(--u)) solid rgba(0,0,0,.15); column-fill:balance; overflow:hidden}
   .np-art.half .np-body{columns:2}
-  .np-art.full .np-body, .np-art.cont .np-body{columns:3}
-  .np-art.front .np-body{columns:3}
+  .np-art.full .np-body, .np-art.cont .np-body{columns:2}
+  .np-art.front .np-body{columns:2}
+  /* 독자들에게 */
+  .np-msg{flex:0 0 auto; margin-top:calc(2.4 * var(--u)); padding:calc(2 * var(--u)) calc(2.8 * var(--u)); background:var(--soft); border-left:calc(1 * var(--u)) solid var(--dc);
+    border-radius:0 calc(1.4 * var(--u)) calc(1.4 * var(--u)) 0; font-family:var(--serif); font-size:calc(var(--fs) * var(--u)); line-height:1.65}
+  .np-msg h5{margin:0 0 calc(.8 * var(--u)); font-family:"IBM Plex Sans KR", sans-serif; font-size:calc(2.4 * var(--u)); color:var(--dc); letter-spacing:.1em}
+  .np-msg p{margin:0; white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere}
   .np-body p{margin:0 0 calc(var(--fs) * .55 * var(--u)); text-indent:calc(var(--fs) * var(--u))}
   .np-body p.first{text-indent:0}
   .np-body p.first::first-letter{float:left; font-family:var(--display); font-weight:400; color:var(--dc); font-size:calc(var(--fs) * 3.4 * var(--u)); line-height:.9;
@@ -382,21 +413,21 @@
 <!-- 칼럼 쓰기 -->
 <div class="sheet" id="sheet-post" role="dialog" aria-modal="true" aria-labelledby="ps-title">
   <h2 id="ps-title">내 칼럼 올리기</h2>
-  <p class="lead">내가 기자가 되어 가고 싶은 학과를 소개합니다. 올린 글과 사진은 그대로 신문 지면에 실립니다.</p>
+  <p class="lead">내가 기자가 되어 가고 싶은 학과(관심 분야)를 소개합니다. 올린 글과 사진은 그대로 신문 지면에 실립니다.</p>
+  <button type="button" class="btn rec" id="ps-writer" style="width:100%; margin-bottom:14px">신문 지면에서 바로 쓰기 (추천)</button>
   <form id="ps-form">
-    <div class="row2">
-      <div class="field"><label for="f-dept">지망 학과 *</label><input type="text" id="f-dept" autocomplete="off" placeholder="예) 간호학과"></div>
-      <div class="field"><label for="f-grade">학년 · 반 (없어도 됩니다)</label><input type="text" id="f-grade" autocomplete="off" placeholder="예) 2학년 6반"></div>
-    </div>
+    <div class="field"><label>지면 크기</label>
+      <div class="size-pick">
+        <button type="button" class="chip" id="f-half" aria-pressed="true">반 페이지</button>
+        <button type="button" class="chip" id="f-full" aria-pressed="false">한 페이지</button>
+      </div></div>
+    <div class="field"><label for="f-dept">지망 학과 · 관심 분야 *</label><input type="text" id="f-dept" autocomplete="off" placeholder="예) 간호학과 / 인공지능 / 스포츠 마케팅"></div>
     <div class="field"><label for="f-head">칼럼 제목 *</label><input type="text" id="f-head" autocomplete="off" placeholder="예) 응급실의 1분, 간호사는 무엇을 보는가"></div>
-    <div class="field"><label for="f-lead">한 줄로 말하면</label><input type="text" id="f-lead" autocomplete="off" maxlength="80" placeholder="예) 아픈 사람 곁에 가장 오래 머무는 전문가">
-      <small>신문에서 큰 글씨 인용구로 쓰입니다.</small></div>
-    <div class="field"><label for="f-body">본문 *</label><textarea id="f-body" rows="12" placeholder="문단은 줄을 바꿔 나눠 주세요. 써 온 칼럼을 그대로 붙여 넣어도 됩니다."></textarea>
+    <div class="field"><label for="f-body">조사한 내용 *</label><textarea id="f-body" rows="12" placeholder="학과(관심 분야)에 대해 조사한 내용을 씁니다. 문단은 줄을 바꿔 나눠 주세요. 써 온 칼럼을 그대로 붙여 넣어도 됩니다."></textarea>
       <small id="f-count">0자</small></div>
-    <div class="row2">
-      <div class="field"><label for="f-learn">이 학과에서 배우는 것</label><textarea id="f-learn" rows="3" placeholder="예) 기본간호학, 성인간호학, 해부생리학"></textarea></div>
-      <div class="field"><label for="f-future">졸업 후 진로</label><textarea id="f-future" rows="3" placeholder="예) 병원 간호사, 보건교사, 간호직 공무원"></textarea></div>
-    </div>
+    <div class="field"><label for="f-msg">독자들에게 하고 싶은 말</label><textarea id="f-msg" rows="3" placeholder="예) 간호사는 생각보다 훨씬 많은 판단을 하는 직업이에요. 관심 있다면 생명과학을 꼭 챙겨 두세요!"></textarea></div>
+    <div class="field"><label for="f-prep">이 학과(관심 분야)를 위해 준비해야 하는 것</label><textarea id="f-prep" rows="3" placeholder="예) 생명과학 · 화학 공부, 봉사활동, 의학 관련 독서"></textarea></div>
+    <div class="field"><label for="f-future">관련 진로</label><textarea id="f-future" rows="3" placeholder="예) 병원 간호사, 보건교사, 간호직 공무원"></textarea></div>
     <div class="field">
       <label>사진 — 한 장 이상 넣어 주세요 (최대 6장, Ctrl+V 붙여 넣기 가능)</label>
       <label class="filepick"><b>사진 고르기</b><span>학과 건물, 실습 장면, 관련 물건, 직접 그린 그림 등 · 저작권 있는 사진은 출처를 설명에</span>
@@ -410,6 +441,25 @@
       <button type="submit" class="btn rec" id="ps-save">올리기</button>
     </div>
   </form>
+</div>
+
+<!-- 지면에서 쓰기 -->
+<div id="np-writer" role="dialog" aria-modal="true" aria-labelledby="wr-h">
+  <div class="wr-top">
+    <h2 id="wr-h">지면에서 쓰기</h2>
+    <div class="size-pick" role="group" aria-label="지면 크기">
+      <button type="button" class="chip" id="wr-half" aria-pressed="true">반 페이지</button>
+      <button type="button" class="chip" id="wr-full" aria-pressed="false">한 페이지</button>
+    </div>
+    <label class="btn sm" for="wr-photo">＋ 사진 추가</label>
+    <input type="file" id="wr-photo" accept="image/*" multiple hidden>
+    <span class="sp"></span>
+    <button type="button" class="btn sm" id="wr-form">칸으로 쓰기</button>
+    <button type="button" class="btn sm" id="wr-close">닫기</button>
+    <button type="button" class="btn sm rec" id="wr-save">저장</button>
+  </div>
+  <div class="wr-status" id="wr-status">점선 칸을 눌러 바로 쓰세요. 사진은 ‘사진 추가’를 누르거나 캡처해서 Ctrl+V 로 붙여 넣습니다.</div>
+  <div id="wr-stage"></div>
 </div>
 
 <!-- 칼럼 보기 -->
@@ -1237,7 +1287,9 @@ var FIREBASE_CONFIG = {
       head: ed.head != null && ed.head !== "" ? ed.head : (it.headline || "제목 없음"),
       lead: ed.lead != null ? ed.lead : (it.lead || ""),
       body: ed.body != null && ed.body !== "" ? ed.body : (it.text || ""),
-      learn: it.learn || "", future: it.future || "",
+      message: it.message || "",
+      prepare: it.prepare || it.learn || "", prepLabel: (!it.prepare && it.learn) ? "배우는 것" : "준비할 것",
+      future: it.future || "", size: it.size === "full" ? "full" : (it.size === "half" ? "half" : ""),
       photos: photos, edited: !!(ed.head || ed.lead || ed.body || (ed.caps && ed.caps.length))
     };
   }
@@ -1495,10 +1547,11 @@ var FIREBASE_CONFIG = {
       box.appendChild(ph);
     }
     box.appendChild(el("div", "post-body", a.body));
-    if(a.learn || a.future){
+    if(a.message || a.prepare || a.future){
       var dl = el("dl", "post-facts");
-      if(a.learn){ dl.appendChild(el("dt", null, "배우는 것")); dl.appendChild(el("dd", null, a.learn)); }
-      if(a.future){ dl.appendChild(el("dt", null, "졸업 후 진로")); dl.appendChild(el("dd", null, a.future)); }
+      if(a.message){ dl.appendChild(el("dt", null, "독자들에게")); dl.appendChild(el("dd", null, a.message)); }
+      if(a.prepare){ dl.appendChild(el("dt", null, a.prepLabel)); dl.appendChild(el("dd", null, a.prepare)); }
+      if(a.future){ dl.appendChild(el("dt", null, "관련 진로")); dl.appendChild(el("dd", null, a.future)); }
       box.appendChild(dl);
     }
     if(State.teacher || it.uid === myUid()){
@@ -1587,15 +1640,22 @@ var FIREBASE_CONFIG = {
     return n;
   }
   $("f-photo").addEventListener("change", function(e){ addShots(e.target.files); this.value = ""; });
-  $("f-body").addEventListener("input", function(){ $("f-count").textContent = this.value.replace(/\s/g, "").length + "자 (띄어쓰기 빼고)"; });
-  document.addEventListener("paste", function(e){
-    if(!$("sheet-post").classList.contains("open") || !e.clipboardData) return;
+  $("f-body").addEventListener("input", countBody);
+  function clipImages(cd){
     var files = [];
-    Array.prototype.forEach.call(e.clipboardData.items || [], function(it){
+    Array.prototype.forEach.call(cd.items || [], function(it){
       if(it.kind === "file" && /^image\//.test(it.type || "")){ var f = it.getAsFile(); if(f) files.push(f); }
     });
+    return files;
+  }
+  document.addEventListener("paste", function(e){
+    if(e.defaultPrevented || !e.clipboardData) return;
+    var inWriter = writerOpen();
+    if(!inWriter && !$("sheet-post").classList.contains("open")) return;
+    var files = clipImages(e.clipboardData);
     if(!files.length) return;
     e.preventDefault();
+    if(inWriter){ writerAddPhotos(files); return; }
     var n = addShots(files);
     if(n) toast(n + "장 붙여 넣었습니다");
   });
@@ -1607,41 +1667,59 @@ var FIREBASE_CONFIG = {
     editingPost = it;
     $("ps-title").textContent = it ? "칼럼 고치기" : "내 칼럼 올리기";
     $("f-dept").value = it ? (it.dept || "") : "";
-    $("f-grade").value = it ? (it.grade || "") : (lsGet("bs.grade") || "");
     $("f-head").value = it ? (it.headline || "") : "";
-    $("f-lead").value = it ? (it.lead || "") : "";
     $("f-body").value = it ? (it.text || "") : "";
-    $("f-learn").value = it ? (it.learn || "") : "";
+    $("f-msg").value = it ? (it.message || "") : "";
+    $("f-prep").value = it ? (it.prepare || it.learn || "") : "";
     $("f-future").value = it ? (it.future || "") : "";
-    $("f-count").textContent = $("f-body").value.replace(/\s/g, "").length + "자 (띄어쓰기 빼고)";
+    postSize = it && it.size === "full" ? "full" : "half";
+    drawSize();
+    countBody();
     shots = ((it && it.photos) || []).map(function(p, i){ return {url:p.url, path:p.path || "", cap:((it.caps || [])[i]) || ""}; });
     drawShots();
     $("ps-delete").hidden = !it;
     $("ps-save").textContent = it ? "저장" : "올리기";
     $("ps-err").hidden = true;
+    // 넓은 화면(컴퓨터실)은 신문 지면에서 바로 씁니다
+    if(wideScreen()){ sheetTouched = false; openWriter(); return; }
     openSheet("sheet-post");
     setTimeout(function(){ $(it ? "f-body" : "f-dept").focus(); }, 200);
   }
-  $("ps-form").addEventListener("submit", function(e){
-    e.preventDefault();
-    $("ps-err").hidden = true;
-    var dept = $("f-dept").value.trim(), head = $("f-head").value.trim(), body = $("f-body").value.replace(/\r/g, "").trim();
-    if(!dept){ showErr("ps-err", "지망 학과를 적어 주세요."); $("f-dept").focus(); return; }
-    if(!head){ showErr("ps-err", "칼럼 제목을 적어 주세요."); $("f-head").focus(); return; }
-    if(body.length < 20){ showErr("ps-err", "본문을 조금 더 써 주세요."); $("f-body").focus(); return; }
+  var postSize = "half";
+  function drawSize(){
+    $("f-half").setAttribute("aria-pressed", postSize === "half" ? "true" : "false");
+    $("f-full").setAttribute("aria-pressed", postSize === "full" ? "true" : "false");
+  }
+  function countBody(){ $("f-count").textContent = $("f-body").value.replace(/\s/g, "").length + "자 (띄어쓰기 빼고)"; }
+  $("f-half").addEventListener("click", function(){ postSize = "half"; drawSize(); sheetTouched = true; });
+  $("f-full").addEventListener("click", function(){ postSize = "full"; drawSize(); sheetTouched = true; });
+  function formDraft(){
+    return {dept: $("f-dept").value.trim(), head: $("f-head").value.trim(), text: $("f-body").value.replace(/\r/g, "").trim(),
+      message: $("f-msg").value.trim(), prepare: $("f-prep").value.trim(), future: $("f-future").value.trim(), size: postSize};
+  }
+  function draftToForm(d){
+    $("f-dept").value = d.dept; $("f-head").value = d.head; $("f-body").value = d.text;
+    $("f-msg").value = d.message; $("f-prep").value = d.prepare; $("f-future").value = d.future;
+    postSize = d.size === "full" ? "full" : "half";
+    drawSize(); countBody(); drawShots();
+  }
+  // 칸으로 쓰든 지면에서 쓰든 여기서 저장합니다
+  function savePost(d, b, fail, ok){
+    if(!d.dept){ fail("지망 학과나 관심 분야를 적어 주세요."); return; }
+    if(!d.head){ fail("칼럼 제목을 적어 주세요."); return; }
+    if(d.text.replace(/\s/g, "").length < 20){ fail("조사한 내용을 조금 더 써 주세요."); return; }
     var was = editingPost, id = was ? was.id : uid();
-    var b = $("ps-save"), label = b.textContent;
+    var label = b.textContent;
     b.disabled = true;
-    lsSet("bs.grade", $("f-grade").value.trim());
     var photos = [], caps = [], n = 0;
-    var todo = shots.filter(function(s){ return s.file; }).length;
-    shots.reduce(function(pr, s){
+    var todo = shots.filter(function(x){ return x.file; }).length;
+    shots.reduce(function(pr, x){
       return pr.then(function(){
-        caps.push(String(s.cap || "").trim());
-        if(s.url) return {url:s.url, path:s.path || ""};
+        caps.push(String(x.cap || "").trim());
+        if(x.url) return {url:x.url, path:x.path || ""};
         n++;
         b.textContent = "사진 올리는 중 " + n + "/" + todo;
-        return shrinkImage(s.file, 2200).then(function(blob){ return uploadPhotoTo("bc", id, blob); });
+        return shrinkImage(x.file, 2200).then(function(blob){ return uploadPhotoTo("bc", id, blob); });
       }).then(function(r){ photos.push(r); });
     }, Promise.resolve()).then(function(){
       b.textContent = "저장 중…";
@@ -1652,21 +1730,169 @@ var FIREBASE_CONFIG = {
       data.name = was ? was.name : myName();
       data.role = was ? (was.role || "기자") : "기자";
       data.label = "칼럼";
-      data.text = body; data.link = ""; data.files = (was && was.files) || [];
+      data.link = ""; data.files = (was && was.files) || [];
       data.photos = photos; data.caps = caps;
-      data.dept = dept; data.grade = $("f-grade").value.trim(); data.headline = head;
-      data.lead = $("f-lead").value.trim(); data.learn = $("f-learn").value.trim(); data.future = $("f-future").value.trim();
+      data.dept = d.dept; data.headline = d.head; data.text = d.text;
+      data.message = d.message; data.prepare = d.prepare; data.future = d.future;
+      data.size = d.size === "full" ? "full" : "half";
       data.createdAt = was ? (was.createdAt || Date.now()) : Date.now();
       data.updatedAt = Date.now();
       return withPatience(put("bcItems", id, data));
     }).then(function(how){
       shots = [];
-      closeSheets();
+      ok();
       toast(how === "queued" ? "저장했습니다 — 인터넷이 돌아오면 올라갑니다" : (was ? "고쳤습니다" : "칼럼을 올렸습니다! 보드에 붙었어요"));
-    })["catch"](function(ex){ showErr("ps-err", errText(ex)); })["then"](function(){
+    })["catch"](function(ex){ fail(errText(ex)); })["then"](function(){
       b.disabled = false;
       b.textContent = label;
     });
+  }
+  $("ps-form").addEventListener("submit", function(e){
+    e.preventDefault();
+    $("ps-err").hidden = true;
+    savePost(formDraft(), $("ps-save"), function(m){ showErr("ps-err", m); }, function(){ closeSheets(); });
+  });
+  $("ps-writer").addEventListener("click", function(){ openWriter(); });
+
+  /* ---------------- 지면에서 쓰기 ----------------
+     실제 신문 지면(반 페이지 / 한 페이지) 위에서 제목 · 본문 · 사진 · 사진 설명을 바로 씁니다.
+     쓰는 대로 글자 크기를 맞춰 보고, 넘치면 위에 알려 줍니다. */
+  var wr = {d:null, b:null, dirty:false, t:null};
+  function wideScreen(){ return window.innerWidth >= 900; }
+  function writerOpen(){ return $("np-writer").classList.contains("open"); }
+  function openWriter(){
+    wr.d = formDraft();
+    wr.dirty = sheetTouched;
+    $("sheet-post").classList.remove("open");
+    $("scrim").classList.remove("open");
+    $("np-writer").classList.add("open");
+    document.body.style.overflow = "hidden";
+    drawWriter();
+  }
+  function closeWriter(){
+    $("np-writer").classList.remove("open");
+    document.body.style.overflow = "";
+    clear($("wr-stage"));
+    wr.b = null;
+  }
+  function draftArticle(d){
+    var was = editingPost;
+    return {id: was ? was.id : "draft", uid: myUid(), name: was ? was.name : myName(), grade: (was && was.grade) || "",
+      dept: d.dept, cat: catOf(d.dept), head: d.head, lead: "", body: d.text, message: d.message,
+      prepare: d.prepare, prepLabel: "준비할 것", future: d.future, size: d.size,
+      photos: shots.map(function(x){ return {url: x.url || x.preview, cap: x.cap || ""}; })};
+  }
+  function readWriter(){
+    if(!wr.b) return;
+    Array.prototype.forEach.call($("wr-stage").querySelectorAll("[data-f]"), function(n){
+      var f = n.getAttribute("data-f");
+      var t = (n.innerText || "").replace(/\r/g, "").replace(/\u00a0/g, " ");
+      if(f === "cap"){ var x = shots[+n.getAttribute("data-i")]; if(x) x.cap = t.replace(/\s*\n\s*/g, " ").trim(); return; }
+      if(f === "text") t = t.split(/\n+/).map(function(y){ return y.trim(); }).filter(Boolean).join("\n");
+      else if(n.getAttribute("data-one")) t = t.replace(/\s*\n\s*/g, " ").trim();
+      else t = t.split(/\n+/).map(function(y){ return y.trim(); }).filter(Boolean).join("\n");
+      wr.d[f] = t;
+    });
+  }
+  function drawWriter(){
+    var cfg = cfgOf(prod());
+    var mode = wr.d.size === "full" ? "full" : "half";
+    $("wr-half").setAttribute("aria-pressed", mode === "half" ? "true" : "false");
+    $("wr-full").setAttribute("aria-pressed", mode === "full" ? "true" : "false");
+    $("wr-h").textContent = editingPost ? "지면에서 고치기" : "지면에서 쓰기";
+    var stage = $("wr-stage");
+    clear(stage);
+    var pg = pageShell(cfg, "○", false);
+    pg.page.classList.add("ed-live");
+    var b = buildArticle(draftArticle(wr.d), mode, cfg, true);
+    pg.content.appendChild(b.el);
+    if(mode === "half") pg.content.appendChild(mk("div", "np-slotph", "다른 부원의 칼럼이 들어갈 자리"));
+    wr.b = b;
+    var holder = mk("div", "np-holder");
+    holder.appendChild(pg.page);
+    stage.appendChild(holder);
+    var pw = pg.page.offsetWidth, ph = pg.page.offsetHeight;
+    var sc = Math.min(1.25, (stage.clientWidth - 32) / pw);
+    holder.style.width = Math.round(pw * sc) + "px";
+    holder.style.height = Math.round(ph * sc) + "px";
+    pg.page.style.transform = "scale(" + sc + ")";
+    Array.prototype.forEach.call(stage.querySelectorAll("[data-f]"), function(n){
+      n.addEventListener("input", function(){ wr.dirty = true; clearTimeout(wr.t); wr.t = setTimeout(fitWriter, 250); });
+      n.addEventListener("keydown", function(e){ if(e.key === "Enter" && n.getAttribute("data-one")) e.preventDefault(); });
+      // 붙여 넣을 때 글자 모양은 버리고 글만 넣습니다(한글 · 워드에서 복사해도 깔끔하게)
+      n.addEventListener("paste", function(e){
+        var cd = e.clipboardData;
+        if(!cd) return;
+        e.preventDefault();
+        var imgs = clipImages(cd);
+        if(imgs.length){ writerAddPhotos(imgs); return; }
+        var t = (cd.getData("text/plain") || "").replace(/\r/g, "");
+        if(n.getAttribute("data-one")) t = t.replace(/\s*\n\s*/g, " ");
+        document.execCommand("insertText", false, t);
+      });
+    });
+    Array.prototype.forEach.call(stage.querySelectorAll("[data-rm]"), function(x){
+      x.addEventListener("click", function(){
+        readWriter();
+        var k = +x.getAttribute("data-rm"), sh = shots[k];
+        if(sh && sh.preview) URL.revokeObjectURL(sh.preview);
+        shots.splice(k, 1);
+        wr.dirty = true;
+        drawShots();
+        drawWriter();
+      });
+    });
+    whenFonts().then(fitWriter);
+  }
+  function fitWriter(){
+    var b = wr.b;
+    if(!b) return;
+    var fits = fitSize(b);
+    var st = $("wr-status");
+    var n = (b.body.innerText || "").replace(/\s/g, "").length;
+    var where = b.mode === "half" ? "반 페이지" : "한 페이지";
+    if(!n && !wr.d.head){
+      st.className = "wr-status";
+      st.textContent = "점선 칸을 눌러 바로 쓰세요. 사진은 ‘사진 추가’를 누르거나 캡처해서 Ctrl+V 로 붙여 넣습니다.";
+    } else if(fits){
+      st.className = "wr-status ok";
+      st.textContent = where + "에 다 들어갑니다 ✓  조사한 내용 " + n + "자 · 사진 " + shots.length + "장";
+    } else if(b.mode === "half"){
+      st.className = "wr-status bad";
+      st.textContent = "반 페이지를 넘쳤어요 (" + n + "자). 글을 조금 줄이거나 ‘한 페이지’를 고르세요. 그대로 저장하면 신문에서는 한 페이지로 실립니다.";
+    } else {
+      st.className = "wr-status warn";
+      st.textContent = "한 페이지를 넘어 다음 면으로 이어집니다 (" + n + "자). 괜찮아요 — 신문에서 ‘▶ 다음 면에 계속’으로 실립니다.";
+    }
+  }
+  function writerAddPhotos(files){
+    readWriter();
+    var before = shots.length;
+    addShots(files);
+    if(shots.length === before && files.length) toast("사진은 " + MAX_SHOTS + "장까지입니다");
+    wr.dirty = true;
+    drawWriter();
+  }
+  $("wr-photo").addEventListener("change", function(e){ var f = e.target.files; if(f && f.length) writerAddPhotos(f); this.value = ""; });
+  $("wr-half").addEventListener("click", function(){ readWriter(); wr.d.size = "half"; wr.dirty = true; drawWriter(); });
+  $("wr-full").addEventListener("click", function(){ readWriter(); wr.d.size = "full"; wr.dirty = true; drawWriter(); });
+  $("wr-form").addEventListener("click", function(){
+    readWriter();
+    draftToForm(wr.d);
+    var dirty = wr.dirty;
+    closeWriter();
+    openSheet("sheet-post");
+    sheetTouched = dirty;
+  });
+  $("wr-close").addEventListener("click", function(){
+    readWriter();
+    if(wr.dirty && !window.confirm("쓰던 내용이 있습니다. 저장하지 않고 닫을까요?")) return;
+    closeWriter();
+  });
+  $("wr-save").addEventListener("click", function(){
+    readWriter();
+    var st = $("wr-status");
+    savePost(wr.d, $("wr-save"), function(m){ st.className = "wr-status bad"; st.textContent = m; }, function(){ wr.dirty = false; closeWriter(); });
   });
   $("ps-delete").addEventListener("click", function(){
     if(!editingPost || !window.confirm("이 칼럼을 지울까요? 신문에서도 빠집니다.")) return;
@@ -1738,44 +1964,57 @@ var FIREBASE_CONFIG = {
     ps.forEach(function(t, i){ box.appendChild(mk("p", (first && i === 0) ? "first" : null, t)); });
     if(more) box.appendChild(mk("span", "more", more));
   }
-  function buildArticle(a, mode, cfg){
+  // 쓰기 화면에서 바로 고칠 수 있는 칸
+  function editable(n, field, ph, multi){
+    n.setAttribute("data-f", field);
+    n.setAttribute("data-ph", ph);
+    n.setAttribute("contenteditable", "true");
+    n.setAttribute("spellcheck", "false");
+    if(!multi) n.setAttribute("data-one", "1");
+    return n;
+  }
+  function buildArticle(a, mode, cfg, edit){
     var art = mk("article", "np-art " + mode + (cfg.contain[a.id] ? " contain" : ""));
     art.style.setProperty("--dc", a.cat.color);
     art.setAttribute("data-id", a.id);
     var tag = mk("div", "np-tag");
-    tag.appendChild(mk("span", "d", a.dept));
+    var dp = mk("span", "d", a.dept);
+    if(edit) editable(dp, "dept", "지망 학과 · 관심 분야");
+    tag.appendChild(dp);
     tag.appendChild(mk("span", "c", a.cat.label));
     tag.appendChild(mk("span", "ln"));
     art.appendChild(tag);
     var h = mk("h2", "np-head", a.head);
-    h.setAttribute("data-edit", "head");
+    if(edit) editable(h, "head", "칼럼 제목을 쓰세요");
+    else h.setAttribute("data-edit", "head");
     art.appendChild(h);
     var by = mk("div", "np-byline");
-    by.appendChild(mk("b", null, a.dept + " 지망"));
-    by.appendChild(document.createTextNode(" · " + (a.grade ? a.grade + " " : "") + a.name + " 기자"));
+    if(a.dept) by.appendChild(mk("b", null, a.dept));
+    by.appendChild(document.createTextNode((a.dept ? " · " : "") + (a.grade ? a.grade + " " : "") + a.name + " 기자"));
     art.appendChild(by);
-    if(a.lead){
+    if(a.lead && !edit){
       var ld = mk("p", "np-lead", a.lead);
       ld.setAttribute("data-edit", "lead");
       art.appendChild(ld);
     }
     var main = mk("div", "np-main");
     var photoBox = null;
-    if(a.photos.length){
+    if(a.photos.length || edit){
       photoBox = mk("div", "np-photos");
+      var figs = a.photos.map(function(ph, i){ return figure(ph, i, i === 0 ? "main" : "sub", edit); });
+      if(edit && a.photos.length < MAX_SHOTS) figs.push(addTile(a.photos.length ? "sub" : "main"));
       if(mode === "half"){
-        photoBox.appendChild(figure(a.photos[0], 0, "main"));
-        if(a.photos.length > 1){
+        photoBox.appendChild(figs[0]);
+        if(figs.length > 1){
           var subs = mk("div", "np-subs");
-          a.photos.slice(1).forEach(function(ph, i){ subs.appendChild(figure(ph, i + 1, "sub")); });
+          figs.slice(1).forEach(function(f){ subs.appendChild(f); });
           photoBox.appendChild(subs);
         }
       } else {
-        var n = a.photos.length;
-        var base = mode === "front" ? (n === 1 ? 64 : (n === 2 ? 52 : 40)) : (n === 1 ? 84 : (n === 2 ? 66 : (n === 3 ? 52 : 46)));
+        var n = figs.length;
+        var base = !a.photos.length ? 34 : (mode === "front" ? (n === 1 ? 64 : (n === 2 ? 52 : 40)) : (n === 1 ? 84 : (n === 2 ? 66 : (n === 3 ? 52 : 46))));
         photoBox.style.setProperty("--ph", base);
-        a.photos.forEach(function(ph, i){
-          var f = figure(ph, i, i === 0 ? "main" : "sub");
+        figs.forEach(function(f){
           // 4장은 한 줄에, 5장 이상은 세 장씩
           if(n === 4) f.style.flex = "0 0 calc((100% - " + 3 * 2.6 + " * var(--u)) / 4)";
           else if(n >= 5) f.style.flex = "0 0 calc((100% - " + 2 * 2.6 + " * var(--u)) / 3)";
@@ -1787,19 +2026,38 @@ var FIREBASE_CONFIG = {
     var text = mk("div", "np-text");
     var body = mk("div", "np-body");
     text.appendChild(body);
-    if(a.learn || a.future){
+    if(a.message || edit){
+      var msg = mk("div", "np-msg");
+      msg.appendChild(mk("h5", null, "독자들에게"));
+      var mp = mk("p", null, a.message);
+      if(edit) editable(mp, "message", "독자들에게 하고 싶은 말을 쓰세요", true);
+      msg.appendChild(mp);
+      text.appendChild(msg);
+    }
+    if(a.prepare || a.future || edit){
       var card = mk("dl", "np-card");
-      card.appendChild(mk("div", "h", a.dept + " 한눈에 보기"));
-      if(a.learn){ card.appendChild(mk("dt", null, "배우는 것")); card.appendChild(mk("dd", null, a.learn)); }
-      if(a.future){ card.appendChild(mk("dt", null, "졸업 후 진로")); card.appendChild(mk("dd", null, a.future)); }
+      card.appendChild(mk("div", "h", (a.dept || "이 학과") + " 한눈에 보기"));
+      if(a.prepare || edit){
+        card.appendChild(mk("dt", null, a.prepLabel || "준비할 것"));
+        var d1 = mk("dd", null, a.prepare);
+        if(edit) editable(d1, "prepare", "이 학과(관심 분야)를 위해 준비해야 하는 것", true);
+        card.appendChild(d1);
+      }
+      if(a.future || edit){
+        card.appendChild(mk("dt", null, "관련 진로"));
+        var d2 = mk("dd", null, a.future);
+        if(edit) editable(d2, "future", "관련 진로", true);
+        card.appendChild(d2);
+      }
       text.appendChild(card);
     }
     main.appendChild(text);
     art.appendChild(main);
-    paras(body, a.body, true, "");
+    if(edit) editable(body, "text", "조사한 내용을 쓰세요. 문단은 Enter 로 나눕니다. 써 온 글을 붙여 넣어도 됩니다.", true);
+    if(a.body) paras(body, a.body, true, "");
     return {el: art, body: body, photos: photoBox, a: a, mode: mode};
   }
-  function figure(ph, i, kind){
+  function figure(ph, i, kind, edit){
     var f = mk("figure", "np-fig " + kind);
     var box = mk("div", "im");
     var im = document.createElement("img");
@@ -1807,12 +2065,31 @@ var FIREBASE_CONFIG = {
     im.decoding = "sync";
     box.appendChild(im);
     f.appendChild(box);
-    if(ph.cap){
+    if(edit){
+      var x = mk("button", "np-x", "✕");
+      x.type = "button";
+      x.setAttribute("data-rm", String(i));
+      x.setAttribute("aria-label", (i + 1) + "번째 사진 빼기");
+      box.appendChild(x);
+      var ce = mk("figcaption", null, ph.cap || "");
+      editable(ce, "cap", "사진 설명");
+      ce.setAttribute("data-i", String(i));
+      f.appendChild(ce);
+    } else if(ph.cap){
       var c = mk("figcaption", null, ph.cap);
       c.setAttribute("data-edit", "cap");
       c.setAttribute("data-i", String(i));
       f.appendChild(c);
     }
+    return f;
+  }
+  function addTile(kind){
+    var f = mk("figure", "np-fig np-add " + kind);
+    var box = mk("label", "im");
+    box.setAttribute("for", "wr-photo");
+    box.appendChild(mk("span", null, "＋ 사진 추가"));
+    box.appendChild(mk("small", null, "누르거나, 캡처해서 Ctrl+V"));
+    f.appendChild(box);
     return f;
   }
   function overflows(b){
@@ -1869,17 +2146,23 @@ var FIREBASE_CONFIG = {
     h.appendChild(mk("b", null, a.head));
     art.appendChild(h);
     var body = mk("div", "np-body");
-    body.style.columns = "3";
+    body.style.columns = "2";
     art.appendChild(body);
     paras(body, text, false, "");
     return {el: art, body: body, photos: null, a: a, mode: "cont"};
   }
   function filler(arts){
     var f = mk("div", "np-filler np-slot2");
-    f.appendChild(mk("h4", null, "한 줄로 말하는 우리 학과"));
+    f.appendChild(mk("h4", null, "기자들이 독자에게"));
     var q = mk("div", "np-quotes");
-    arts.filter(function(a){ return a.lead; }).slice(0, 8).forEach(function(a){
-      var d = mk("div", "np-quote", "“" + a.lead + "”");
+    var oneLine = function(t){
+      var x = String(t || "").split(/\n/)[0].trim();
+      var m = x.match(/^.*?[.!?](?=\s|$)/);
+      if(m && m[0].length >= 12) x = m[0];
+      return x.length > 70 ? x.slice(0, 68) + "…" : x;
+    };
+    arts.filter(function(a){ return a.lead || a.message; }).slice(0, 8).forEach(function(a){
+      var d = mk("div", "np-quote", "“" + (a.lead || oneLine(a.message)) + "”");
       d.style.setProperty("--dc", a.cat.color);
       d.appendChild(mk("b", null, a.dept + " · " + a.name));
       q.appendChild(d);
@@ -1981,7 +2264,7 @@ var FIREBASE_CONFIG = {
     }
     var pending = null;
     rest.forEach(function(a){
-      var want = cfg.span[a.id] || "auto";
+      var want = (cfg.span[a.id] && cfg.span[a.id] !== "auto") ? cfg.span[a.id] : (a.size || "auto");
       var half = want !== "full" && fitsHalf(a);
       if(want === "half" && !half) warn.push(a.head + " — 반 면에 다 들어가지 않아 한 면으로 실었습니다");
       if(half){
@@ -2293,7 +2576,7 @@ var FIREBASE_CONFIG = {
       opts.appendChild(lb);
       var sel = document.createElement("select");
       sel.setAttribute("aria-label", a.head + " 크기");
-      [["auto", "크기 자동"], ["half", "반 면"], ["full", "한 면"]].forEach(function(o){
+      [["auto", "학생이 고른 크기"], ["half", "반 면"], ["full", "한 면"]].forEach(function(o){
         var op = mk("option", null, o[1]);
         op.value = o[0];
         sel.appendChild(op);
@@ -2443,6 +2726,7 @@ var FIREBASE_CONFIG = {
   document.addEventListener("keydown", function(e){
     if(e.key !== "Escape") return;
     if($("imgview").classList.contains("open")) closeImage();
+    else if(writerOpen()) $("wr-close").click();
     else askClose();
   });
 
