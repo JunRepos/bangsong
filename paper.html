@@ -286,6 +286,8 @@
   .np-art.half .np-body{columns:2}
   .np-art.full .np-body, .np-art.cont .np-body{columns:2}
   .np-art.front .np-body{columns:2}
+  /* 한 페이지 · 1면: 글이 짧으면 ‘독자들에게’가 글 바로 아래에 붙습니다(길면 줄어들며 다음 면으로) */
+  .np-art.full .np-body, .np-art.front .np-body{flex:0 1 auto}
   /* 독자들에게 */
   .np-msg{flex:0 0 auto; margin-top:calc(2.4 * var(--u)); padding:calc(2 * var(--u)) calc(2.8 * var(--u)); background:var(--soft); border-left:calc(1 * var(--u)) solid var(--dc);
     border-radius:0 calc(1.4 * var(--u)) calc(1.4 * var(--u)) 0; font-family:var(--serif); font-size:calc(var(--fs) * var(--u)); line-height:1.65}
@@ -1817,7 +1819,16 @@ var FIREBASE_CONFIG = {
     holder.style.height = Math.round(ph * sc) + "px";
     pg.page.style.transform = "scale(" + sc + ")";
     Array.prototype.forEach.call(stage.querySelectorAll("[data-f]"), function(n){
-      n.addEventListener("input", function(){ wr.dirty = true; clearTimeout(wr.t); wr.t = setTimeout(fitWriter, 250); });
+      n.addEventListener("input", function(){
+        wr.dirty = true;
+        clearTimeout(wr.t);
+        wr.t = setTimeout(fitWriter, 250);
+        // 학과를 쓰는 대로 ‘한눈에 보기’ 제목도 따라 바뀝니다
+        if(n.getAttribute("data-f") === "dept"){
+          var ch = stage.querySelector(".np-card .h");
+          if(ch) ch.textContent = (n.innerText.trim() || "이 학과(관심 분야)") + " 한눈에 보기";
+        }
+      });
       n.addEventListener("keydown", function(e){ if(e.key === "Enter" && n.getAttribute("data-one")) e.preventDefault(); });
       // 붙여 넣을 때 글자 모양은 버리고 글만 넣습니다(한글 · 워드에서 복사해도 깔끔하게)
       n.addEventListener("paste", function(e){
@@ -2036,7 +2047,7 @@ var FIREBASE_CONFIG = {
     }
     if(a.prepare || a.future || edit){
       var card = mk("dl", "np-card");
-      card.appendChild(mk("div", "h", (a.dept || "이 학과") + " 한눈에 보기"));
+      card.appendChild(mk("div", "h", (a.dept || "이 학과(관심 분야)") + " 한눈에 보기"));
       if(a.prepare || edit){
         card.appendChild(mk("dt", null, a.prepLabel || "준비할 것"));
         var d1 = mk("dd", null, a.prepare);
