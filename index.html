@@ -389,6 +389,8 @@
   .shot img{width:100%; height:100%; object-fit:cover; display:block}
   .shot button{position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; border:0; background:rgba(0,0,0,.72); color:#fff; font-size:11px; cursor:pointer; line-height:1}
   .lg-modes{display:flex; gap:6px; margin:2px 0 10px}
+  .ro-file{display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 6px}
+  .ro-file .btn{cursor:pointer}
   .roster{display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:6px}
   .roster-row{display:flex; align-items:center; gap:8px; padding:8px 11px; border:1px solid var(--rule); border-radius:10px; background:var(--surface); font-size:13.5px}
   .roster-row .sid{font-family:var(--mono); font-size:12px; color:var(--muted)}
@@ -508,9 +510,15 @@
 <!-- 로그인 -->
 <div class="sheet" id="sheet-roster" role="dialog" aria-modal="true" aria-labelledby="ro-title">
   <h2 id="ro-title">부원 명단</h2>
-  <p class="lead">한 줄에 한 명씩 <b>학번 이름</b>을 적습니다. 엑셀에서 학번 · 이름 두 칸을 복사해 붙여 넣어도 됩니다.
-    명단은 선생님만 볼 수 있게 저장됩니다.</p>
-  <div class="field"><label for="ro-text">학번 이름</label>
+  <p class="lead"><b>엑셀 파일</b>을 고르면 학번 · 이름을 알아서 찾아 아래에 채웁니다. 학년 · 반 · 번호로 나뉜 명단도 학번으로 바꿔 넣습니다.
+    확인하고 <b>저장</b>을 누르세요. 파일은 이 컴퓨터 안에서만 읽고 어디에도 올리지 않습니다.</p>
+  <div class="ro-file">
+    <label class="btn rec" for="ro-file">엑셀 파일 고르기</label>
+    <input type="file" id="ro-file" accept=".xlsx,.xls,.csv" hidden>
+    <button type="button" class="btn" id="ro-sample">빈 양식 받기</button>
+  </div>
+  <p class="hint" id="ro-file-note" hidden></p>
+  <div class="field"><label for="ro-text">학번 이름 (한 줄에 한 명, 직접 적거나 고쳐도 됩니다)</label>
     <textarea id="ro-text" rows="12" placeholder="20601 김하늘&#10;20715 이도윤&#10;10302 박서연"></textarea></div>
   <p class="form-err" id="ro-err" hidden></p>
   <div class="sheet-actions">
@@ -2787,6 +2795,7 @@ var FIREBASE_CONFIG = {
     return {rows: out, bad: bad};
   }
   function openRoster(){
+    $("ro-file-note").hidden = true;
     $("ro-text").value = State.roster.map(function(r){ return r.sid + " " + r.name; }).join("\n");
     $("ro-err").hidden = true;
     openSheet("sheet-roster");
@@ -2831,6 +2840,102 @@ var FIREBASE_CONFIG = {
     work.then(function(){ toast("가입을 풀었습니다"); render(); })["catch"](function(e){ toast(errText(e)); });
   }
   $("ro-save").addEventListener("click", saveRoster);
+
+  /* 엑셀 명단 읽기 — 머리글(학번·이름 / 학년·반·번호)을 찾고, 없으면 숫자 칸과 한글 이름 칸을 찾아 씁니다 */
+  var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+  function rosterFromSheet(rows){
+    var cell = function(r, i){ return String((r && r[i] != null) ? r[i] : "").trim(); };
+    var head = -1, col = {};
+    for(var i = 0; i < Math.min(rows.length, 15) && head < 0; i++){
+      var c = {};
+      (rows[i] || []).forEach(function(v, j){
+        var t = String(v == null ? "" : v).replace(/\s/g, "");
+        if(c.sid == null && /^학번$|^학생번호$/.test(t)) c.sid = j;
+        else if(c.name == null && /^(이름|성명|학생명|학생이름)$/.test(t)) c.name = j;
+        else if(c.grade == null && /^학년$/.test(t)) c.grade = j;
+        else if(c.cls == null && /^반$/.test(t)) c.cls = j;
+        else if(c.no == null && /^(번호|번)$/.test(t)) c.no = j;
+      });
+      if(c.name != null && (c.sid != null || (c.grade != null && c.cls != null && c.no != null))){ head = i; col = c; }
+    }
+    var body = rows.slice(head + 1);
+    if(head < 0){
+      // 머리글이 없으면: 3~8자리 숫자가 가장 많은 칸 = 학번, 한글 2~5자가 가장 많은 칸 = 이름
+      var score = {};
+      body.forEach(function(r){ (r || []).forEach(function(v, j){
+        var t = String(v == null ? "" : v).trim();
+        score[j] = score[j] || {n:0, k:0};
+        if(/^\d{3,8}$/.test(t)) score[j].n++;
+        if(/^[가-힣]{2,5}$/.test(t)) score[j].k++;
+      }); });
+      var bestN = -1, bestK = -1;
+      Object.keys(score).forEach(function(j){
+        if(bestN < 0 || score[j].n > score[bestN].n) bestN = +j;
+      });
+      Object.keys(score).forEach(function(j){
+        if(+j !== bestN && (bestK < 0 || score[j].k > score[bestK].k)) bestK = +j;
+      });
+      if(bestN < 0 || bestK < 0 || !score[bestN].n || !score[bestK].k) return [];
+      col = {sid: bestN, name: bestK};
+    }
+    var out = [];
+    body.forEach(function(r){
+      var name = cell(r, col.name).replace(/\s+/g, "");
+      var sid;
+      if(col.sid != null) sid = cell(r, col.sid).replace(/\.0+$/, "").replace(/\D/g, "");
+      else {
+        var g = cell(r, col.grade).replace(/\D/g, ""), c = cell(r, col.cls).replace(/\D/g, ""), n = cell(r, col.no).replace(/\D/g, "");
+        sid = (g && c && n) ? g + (c.length < 2 ? "0" + c : c) + (n.length < 2 ? "0" + n : n) : "";
+      }
+      if(/^\d{3,8}$/.test(sid) && /^[가-힣A-Za-z]{2,20}$/.test(name)) out.push(sid + " " + name);
+    });
+    return out;
+  }
+  $("ro-file").addEventListener("change", function(e){
+    var f = e.target.files && e.target.files[0];
+    this.value = "";
+    if(!f) return;
+    var note = $("ro-file-note");
+    $("ro-err").hidden = true;
+    note.hidden = false;
+    note.textContent = "‘" + f.name + "’ 읽는 중…";
+    loadScript(XLSX_URL).then(function(){
+      return f.arrayBuffer();
+    }).then(function(buf){
+      /* global XLSX */
+      var wb = XLSX.read(buf, {type: "array"});
+      var lines = [], used = "";
+      // 학생이 가장 많이 나오는 시트를 씁니다
+      wb.SheetNames.forEach(function(sn){
+        var rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header: 1, raw: false, defval: ""});
+        var got = rosterFromSheet(rows);
+        if(got.length > lines.length){ lines = got; used = sn; }
+      });
+      if(!lines.length){
+        note.hidden = true;
+        showErr("ro-err", "파일에서 학번과 이름을 찾지 못했습니다.\n첫 줄에 ‘학번’ ‘이름’(또는 ‘학년’ ‘반’ ‘번호’ ‘이름’) 머리글이 있게 해 주세요. ‘빈 양식 받기’를 써도 됩니다.");
+        return;
+      }
+      var have = $("ro-text").value.trim();
+      if(have && !window.confirm("지금 적혀 있는 명단을 파일 내용(" + lines.length + "명)으로 바꿀까요?")){ note.hidden = true; return; }
+      $("ro-text").value = lines.join("\n");
+      sheetTouched = true;
+      note.textContent = "‘" + f.name + "’" + (wb.SheetNames.length > 1 ? " · " + used + " 시트" : "") + "에서 " + lines.length + "명을 찾았습니다. 아래를 확인하고 저장을 누르세요.";
+    })["catch"](function(){
+      note.hidden = true;
+      showErr("ro-err", "파일을 열지 못했습니다. 엑셀(.xlsx) 또는 .csv 파일인지 확인해 주세요.");
+    });
+  });
+  $("ro-sample").addEventListener("click", function(){
+    // 엑셀에서 바로 열리는 CSV(한글이 깨지지 않게 BOM 포함)
+    var csv = "\ufeff학번,이름\n20601,김하늘\n20715,이도윤\n";
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"}));
+    a.download = "방송부_명단_양식.csv";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  });
 
   function exportCredits(){
     var lines = [["이름", "작품", "종류", "역할", "날짜", "단계", "올린 원고 수"]];
