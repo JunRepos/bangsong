@@ -89,8 +89,34 @@
   .card .ex{font-size:13.5px; color:var(--ink-2); line-height:1.6; overflow:hidden; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical}
   .card .meta{display:flex; gap:10px; font-size:11.5px; color:var(--muted); font-family:var(--mono)}
   .card.mine{border-color:var(--ink-2)}
-  .missing{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
-  .missing span{font-size:12px; background:var(--surface-2); border:1px solid var(--rule); border-radius:999px; padding:3px 10px; color:var(--ink-2)}
+  /* 선생님: 칼럼 현황판 */
+  .tally{border:1px solid var(--rule); background:var(--surface); border-radius:14px; padding:14px 16px; margin-bottom:18px}
+  .tally-head{display:flex; align-items:center; gap:10px 16px; flex-wrap:wrap}
+  .tally-head h2{margin:0; font-size:16px}
+  .tally-count{font-size:13.5px; color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .tally-count b{font-size:20px; color:var(--ink)}
+  .tally-bar{flex:1 1 160px; min-width:120px; height:8px; border-radius:999px; background:var(--surface-3); overflow:hidden; display:flex}
+  .tally-bar i{display:block; height:100%; background:#3ECF8E}
+  .tally-bar i.warn{background:#F2C94C}
+  .tally-pills{display:flex; gap:6px; flex-wrap:wrap; margin:12px 0 10px}
+  .tally-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap:6px}
+  .tally-row{display:flex; align-items:flex-start; gap:10px; text-align:left; width:100%; border:1px solid var(--rule); background:var(--surface-2);
+    border-radius:10px; padding:9px 11px; color:var(--ink); font:inherit; cursor:default}
+  button.tally-row{cursor:pointer}
+  button.tally-row:hover, button.tally-row:focus-visible{border-color:var(--ink-2); outline:none}
+  .tally-row .tdot{flex:0 0 auto; width:10px; height:10px; border-radius:50%; margin-top:5px; background:var(--onair)}
+  .tally-row.done .tdot{background:#3ECF8E}
+  .tally-row.fix .tdot{background:#F2C94C}
+  .tally-row .tw{flex:1; min-width:0}
+  .tally-row .tw b{font-size:14.5px}
+  .tally-row .tw small{color:var(--muted); font-family:var(--mono); font-size:11.5px; margin-left:6px}
+  .tally-row .tw span{display:block; font-size:12px; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .tally-row .tst{flex:0 0 auto; font-size:12px; font-weight:700; color:var(--onair)}
+  .tally-row.done .tst{color:#3ECF8E}
+  .tally-row.fix .tst{color:#F2C94C}
+  .tally-tags{display:flex; gap:4px; flex-wrap:wrap; margin-top:5px}
+  .tally-tags em{font-style:normal; font-size:11px; font-weight:700; color:#F2C94C; border:1px solid rgba(242,201,76,.45); border-radius:999px; padding:1px 7px}
+  .tally-tools{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
 
   /* ── 상세 */
   .post-photos{display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:8px; margin:10px 0}
@@ -1499,22 +1525,8 @@ var FIREBASE_CONFIG = {
       v.appendChild(emptyBox("부원만 볼 수 있어요", "오른쪽 위 ‘로그인 → 부원’에서 방송부 코드를 넣어 주세요."));
       return;
     }
-    // 선생님: 아직 안 올린 부원
-    if(State.teacher){
-      var posted = {};
-      list.forEach(function(x){ posted[x.name] = 1; });
-      var names = {};
-      State.members.forEach(function(m){ if(m.name) names[m.name] = 1; });
-      var miss = Object.keys(names).filter(function(n){ return !posted[n]; }).sort();
-      if(miss.length){
-        var nt = el("div", "notice");
-        nt.appendChild(el("b", null, "아직 안 올린 부원 " + miss.length + "명"));
-        var ms = el("div", "missing");
-        miss.forEach(function(n){ ms.appendChild(el("span", null, n)); });
-        nt.appendChild(ms);
-        v.appendChild(nt);
-      }
-    }
+    // 선생님: 누가 썼고 누가 안 썼는지 한눈에
+    if(State.teacher) v.appendChild(tallyPanel(list));
     if(!list.length){
       v.appendChild(emptyBox("아직 올라온 칼럼이 없어요", "첫 칼럼을 올려 보세요. 올리는 대로 이 벽에 붙습니다."));
       return;
@@ -1542,6 +1554,110 @@ var FIREBASE_CONFIG = {
       g.appendChild(card);
     });
     v.appendChild(g);
+  }
+
+  /* 칼럼 현황판 — 부원마다 ‘아직 / 보완 필요 / 완료’ */
+  var tallyFilter = lsGet("bs.tallyFilter") || "all";
+  function fixesOf(it){
+    var a = [];
+    if(!(it.photos || []).length) a.push("사진 없음");
+    if(String(it.text || "").replace(/\s/g, "").length < 300) a.push("글 짧음");
+    if(!it.message) a.push("독자에게 없음");
+    if(!(it.prepare || it.learn) || !it.future) a.push("한눈에 보기 빔");
+    return a;
+  }
+  function tallyPeople(list){
+    // 같은 학번(없으면 같은 이름)은 한 사람 — 예전에 기기마다 들어온 기록도 묶습니다
+    var people = [], byKey = {};
+    State.members.forEach(function(m){
+      if(!m.name) return;
+      var key = m.sid || ("n:" + m.name);
+      if(!byKey[key]){ byKey[key] = {name: m.name, sid: m.sid || "", uids: [], post: null}; people.push(byKey[key]); }
+      byKey[key].uids.push(m.uid);
+    });
+    list.forEach(function(it){
+      var hit = null;
+      people.forEach(function(pp){ if(!hit && pp.uids.indexOf(it.uid) >= 0) hit = pp; });
+      if(!hit) people.forEach(function(pp){ if(!hit && pp.name === it.name) hit = pp; });
+      if(!hit){ hit = {name: it.name || "부원", sid: "", uids: [it.uid], post: null}; people.push(hit); }
+      if(!hit.post || (it.updatedAt || 0) > (hit.post.updatedAt || 0)) hit.post = it;
+    });
+    people.forEach(function(pp){
+      pp.fixes = pp.post ? fixesOf(pp.post) : [];
+      pp.state = !pp.post ? "todo" : (pp.fixes.length ? "fix" : "done");
+    });
+    var rank = {todo: 0, fix: 1, done: 2};
+    people.sort(function(x, y){
+      return rank[x.state] - rank[y.state] || ((x.sid || "~") < (y.sid || "~") ? -1 : ((x.sid || "~") > (y.sid || "~") ? 1 : (x.name < y.name ? -1 : 1)));
+    });
+    return people;
+  }
+  function tallyPanel(list){
+    var people = tallyPeople(list);
+    var n = {todo: 0, fix: 0, done: 0};
+    people.forEach(function(pp){ n[pp.state]++; });
+    var total = people.length, posted = n.fix + n.done;
+    var box = el("section", "tally");
+    box.setAttribute("aria-label", "칼럼 현황");
+    var head = el("div", "tally-head");
+    head.appendChild(el("h2", null, "칼럼 현황"));
+    var cnt = el("div", "tally-count");
+    cnt.appendChild(el("b", null, posted + " / " + total));
+    cnt.appendChild(document.createTextNode("명 올림"));
+    head.appendChild(cnt);
+    var bar = el("div", "tally-bar");
+    bar.setAttribute("role", "img");
+    bar.setAttribute("aria-label", "올림 " + posted + "명, 아직 " + n.todo + "명");
+    var g = el("i"); g.style.width = (total ? n.done / total * 100 : 0) + "%"; bar.appendChild(g);
+    var w = el("i", "warn"); w.style.width = (total ? n.fix / total * 100 : 0) + "%"; bar.appendChild(w);
+    head.appendChild(bar);
+    box.appendChild(head);
+    if(!total){
+      box.appendChild(el("p", "hint", "아직 가입한 부원이 없습니다. 부원이 가입하면 여기에 한 명씩 뜹니다."));
+      return box;
+    }
+    var pills = el("div", "tally-pills");
+    [["all", "전체 " + total], ["todo", "아직 " + n.todo], ["fix", "보완 필요 " + n.fix], ["done", "완료 " + n.done]].forEach(function(f){
+      var b = btn("chip", f[1], function(){ tallyFilter = f[0]; lsSet("bs.tallyFilter", f[0]); render(); });
+      b.setAttribute("aria-pressed", tallyFilter === f[0] ? "true" : "false");
+      pills.appendChild(b);
+    });
+    box.appendChild(pills);
+    var grid = el("div", "tally-grid");
+    var shown = people.filter(function(pp){ return tallyFilter === "all" || pp.state === tallyFilter; });
+    if(!shown.length) grid.appendChild(el("p", "hint", tallyFilter === "todo" ? "모두 올렸습니다 👏" : "해당하는 부원이 없습니다."));
+    shown.forEach(function(pp){
+      var it = pp.post;
+      var row = it ? btn("tally-row " + pp.state, null, function(){ openView(it); }) : el("div", "tally-row todo");
+      row.appendChild(el("i", "tdot"));
+      var who = el("div", "tw");
+      who.appendChild(el("b", null, pp.name));
+      if(pp.sid) who.appendChild(el("small", null, pp.sid));
+      if(it){
+        var len = String(it.text || "").replace(/\s/g, "").length;
+        who.appendChild(el("span", null, (it.dept || "학과 없음") + " · " + (it.size === "full" ? "한 페이지" : "반 페이지") + " · " + len + "자 · 사진 " + (it.photos || []).length + " · " + timeText(it.updatedAt || it.createdAt)));
+        if(pp.fixes.length){
+          var tags = el("div", "tally-tags");
+          pp.fixes.forEach(function(f){ tags.appendChild(el("em", null, f)); });
+          who.appendChild(tags);
+        }
+      } else who.appendChild(el("span", null, "아직 칼럼을 올리지 않았습니다"));
+      row.appendChild(who);
+      row.appendChild(el("span", "tst", pp.state === "todo" ? "아직" : (pp.state === "fix" ? "보완" : "완료")));
+      grid.appendChild(row);
+    });
+    box.appendChild(grid);
+    if(n.todo){
+      var tools = el("div", "tally-tools");
+      tools.appendChild(btn("btn sm", "아직 안 쓴 사람 이름 복사", function(){
+        var names = people.filter(function(pp){ return pp.state === "todo"; }).map(function(pp){ return pp.name; }).join(", ");
+        var ok = function(){ toast("복사했습니다: " + names); };
+        if(navigator.clipboard) navigator.clipboard.writeText(names).then(ok, function(){ toast(names); });
+        else toast(names);
+      }));
+      box.appendChild(tools);
+    }
+    return box;
   }
 
   /* 칼럼 하나 크게 보기 + 댓글 */
