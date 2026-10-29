@@ -495,6 +495,7 @@
     <label class="btn sm" for="wr-photo">＋ 사진 추가</label>
     <input type="file" id="wr-photo" accept="image/*" multiple hidden>
     <button type="button" class="btn sm" id="wr-design-btn" aria-expanded="false" aria-controls="wr-design">디자인 바꾸기</button>
+    <button type="button" class="btn sm" id="wr-import" hidden>붙여 넣어 불러오기</button>
     <span class="sp"></span>
     <button type="button" class="btn sm" id="wr-form">칸으로 쓰기</button>
     <button type="button" class="btn sm" id="wr-close">닫기</button>
@@ -506,6 +507,13 @@
     <div class="grp"><span>사진 모양</span><div class="size-pick" id="wd-fit"></div></div>
     <div class="grp"><span>색</span><div class="swatches" id="wd-color"></div></div>
     <button type="button" class="btn sm" id="wd-reset">디자인 처음으로</button>
+  </div>
+  <div class="wr-design" id="wr-importbox" hidden>
+    <div class="grp" style="flex:1 1 420px; flex-direction:column; align-items:stretch">
+      <span>정리된 칼럼(글 · 사진 · 디자인)을 복사해 왔다면 아래에 붙여 넣고 ‘불러오기’를 누르세요. 불러온 뒤 확인하고 저장합니다.</span>
+      <textarea id="wr-import-text" rows="3" style="width:100%; border:1px solid var(--rule); border-radius:8px; padding:8px; background:var(--bg); color:var(--ink); font-size:12px" placeholder="여기에 붙여 넣기 (Ctrl+V)"></textarea>
+    </div>
+    <button type="button" class="btn sm rec" id="wr-import-go">불러오기</button>
   </div>
   <div class="wr-status" id="wr-status">점선 칸을 눌러 바로 쓰세요. 사진은 ‘사진 추가’를 누르거나 캡처해서 Ctrl+V 로 붙여 넣습니다.</div>
   <div id="wr-stage"></div>
@@ -1295,7 +1303,7 @@ var FIREBASE_CONFIG = {
   var DEFAULT_CFG = {
     title: "나의 학과를 소개해!", kicker: "신동고 방송부 진로신문", issue: "제1호", date: "",
     note: "", theme: "classic", size: "B4",
-    order: [], lead: "", span: {}, contain: {}, hidden: {}, edits: {}
+    order: [], lead: "", span: {}, contain: {}, hidden: {}, edits: {}, excused: {}
   };
   function fullDate(iso){
     var d = parseISO(iso);
@@ -1582,9 +1590,13 @@ var FIREBASE_CONFIG = {
       if(!hit){ hit = {name: it.name || "부원", sid: "", uids: [it.uid], post: null}; people.push(hit); }
       if(!hit.post || (it.updatedAt || 0) > (hit.post.updatedAt || 0)) hit.post = it;
     });
+    var excused = cfgOf(prod()).excused || {};
     people.forEach(function(pp){
+      pp.key = pp.sid || ("n:" + pp.name);
       pp.fixes = pp.post ? fixesOf(pp.post) : [];
       pp.state = !pp.post ? "todo" : (pp.fixes.length ? "fix" : "done");
+      // 종이 · 파일로 따로 낸 학생은 선생님이 완료로 표시할 수 있습니다
+      if(!pp.post && excused[pp.key]){ pp.state = "done"; pp.excused = true; }
     });
     var rank = {todo: 0, fix: 1, done: 2};
     people.sort(function(x, y){
@@ -1641,7 +1653,19 @@ var FIREBASE_CONFIG = {
           pp.fixes.forEach(function(f){ tags.appendChild(el("em", null, f)); });
           who.appendChild(tags);
         }
-      } else who.appendChild(el("span", null, "아직 칼럼을 올리지 않았습니다"));
+      } else {
+        who.appendChild(el("span", null, pp.excused ? "따로 제출 — 선생님이 완료로 표시함" : "아직 칼럼을 올리지 않았습니다"));
+        var acts = el("div", "tally-tools");
+        acts.style.marginTop = "6px";
+        acts.appendChild(btn("btn sm", "대신 쓰기", function(){ openPost(null, {uid: pp.uids[0], name: pp.name}); }));
+        acts.appendChild(btn("btn sm", pp.excused ? "표시 풀기" : "완료로 표시", function(){
+          var c = cfgOf(prod());
+          c.excused = c.excused || {};
+          if(pp.excused) delete c.excused[pp.key]; else c.excused[pp.key] = true;
+          saveCfg(c, pp.excused ? pp.name + " — 다시 ‘아직’으로" : pp.name + " — 완료로 표시했습니다");
+        }));
+        who.appendChild(acts);
+      }
       row.appendChild(who);
       row.appendChild(el("span", "tst", pp.state === "todo" ? "아직" : (pp.state === "fix" ? "보완" : "완료")));
       grid.appendChild(row);
@@ -1811,8 +1835,10 @@ var FIREBASE_CONFIG = {
     var n = addShots(files);
     if(n) toast(n + "장 붙여 넣었습니다");
   });
-  function openPost(it){
+  var proxy = null;   // 선생님이 대신 쓰는 부원 {uid, name}
+  function openPost(it, forWho){
     if(!canWrite()){ openLogin("member"); return; }
+    proxy = (!it && forWho && State.teacher) ? forWho : null;
     if(it && !(State.teacher || it.uid === myUid() || it.name === myName())){ toast("자기 칼럼만 고칠 수 있어요"); return; }
     // 저장 규칙상 칼럼은 올린 기기에서만 고칠 수 있습니다
     if(it && State.cloud && !State.teacher && it.uid !== myUid()){ toast("다른 기기에서 올린 칼럼이에요. 그 기기에서 고치거나 선생님께 부탁해 주세요"); return; }
@@ -1880,8 +1906,9 @@ var FIREBASE_CONFIG = {
       var data = {};
       if(was) Object.keys(was).forEach(function(k){ if(k !== "id") data[k] = was[k]; });
       data.prodId = State.prodId;
-      data.uid = was ? was.uid : myUid();
-      data.name = was ? was.name : myName();
+      data.uid = was ? was.uid : (proxy ? proxy.uid : myUid());
+      data.name = was ? was.name : (proxy ? proxy.name : myName());
+      if(typeof d.lead === "string") data.lead = d.lead;
       data.role = was ? (was.role || "기자") : "기자";
       data.label = "칼럼";
       data.link = ""; data.files = (was && was.files) || [];
@@ -1916,6 +1943,8 @@ var FIREBASE_CONFIG = {
   function wideScreen(){ return window.innerWidth >= 900; }
   function writerOpen(){ return $("np-writer").classList.contains("open"); }
   function openWriter(){
+    $("wr-import").hidden = !State.teacher;
+    $("wr-importbox").hidden = true;
     wr.d = formDraft();
     wr.dirty = sheetTouched;
     $("sheet-post").classList.remove("open");
@@ -1932,8 +1961,8 @@ var FIREBASE_CONFIG = {
   }
   function draftArticle(d){
     var was = editingPost;
-    return {id: was ? was.id : "draft", uid: myUid(), name: was ? was.name : myName(), grade: (was && was.grade) || "",
-      dept: d.dept, cat: catOf(d.dept), head: d.head, lead: "", body: d.text, message: d.message,
+    return {id: was ? was.id : "draft", uid: myUid(), name: was ? was.name : (proxy ? proxy.name : myName()), grade: (was && was.grade) || "",
+      dept: d.dept, cat: catOf(d.dept), head: d.head, lead: typeof d.lead === "string" ? d.lead : ((was && was.lead) || ""), body: d.text, message: d.message,
       prepare: d.prepare, prepLabel: "준비할 것", future: d.future, size: d.size,
       st: cleanStyle(d.style), color: cleanStyle(d.style).color || catOf(d.dept).color,
       photos: shots.map(function(x){ return {url: x.url || x.preview, cap: x.cap || ""}; })};
@@ -1955,7 +1984,7 @@ var FIREBASE_CONFIG = {
     var mode = wr.d.size === "full" ? "full" : "half";
     $("wr-half").setAttribute("aria-pressed", mode === "half" ? "true" : "false");
     $("wr-full").setAttribute("aria-pressed", mode === "full" ? "true" : "false");
-    $("wr-h").textContent = editingPost ? "지면에서 고치기" : "지면에서 쓰기";
+    $("wr-h").textContent = editingPost ? "지면에서 고치기" : (proxy ? proxy.name + " 대신 쓰기" : "지면에서 쓰기");
     drawDesign(mode);
     var stage = $("wr-stage");
     clear(stage);
@@ -2089,6 +2118,37 @@ var FIREBASE_CONFIG = {
     wr.dirty = true;
     drawWriter();
   });
+  function dataUrlFile(u, name){
+    var m = String(u || "").match(/^data:([^;]+);base64,(.*)$/);
+    if(!m) return null;
+    var bin = atob(m[2]), arr = new Uint8Array(bin.length);
+    for(var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new File([arr], name, {type: m[1]});
+  }
+  $("wr-import").addEventListener("click", function(){
+    var box = $("wr-importbox");
+    box.hidden = !box.hidden;
+    if(!box.hidden) setTimeout(function(){ $("wr-import-text").focus(); }, 50);
+  });
+  $("wr-import-go").addEventListener("click", function(){
+    var j;
+    try { j = JSON.parse($("wr-import-text").value); } catch(e){ j = null; }
+    if(!j || !j.head){ toast("불러올 칼럼을 찾지 못했습니다. 복사한 내용을 그대로 붙여 넣어 주세요"); return; }
+    wr.d = {dept: j.dept || "", head: j.head || "", text: j.text || "", message: j.message || "", prepare: j.prepare || "",
+      future: j.future || "", size: j.size === "half" ? "half" : "full", style: cleanStyle(j.style), lead: j.lead || ""};
+    shots.forEach(function(x){ if(x.preview) URL.revokeObjectURL(x.preview); });
+    shots = [];
+    (j.photos || []).slice(0, MAX_SHOTS).forEach(function(ph, i){
+      var f = dataUrlFile(ph.data, "photo" + (i + 1) + ".jpg");
+      if(f) shots.push({file: f, preview: URL.createObjectURL(f), cap: ph.cap || ""});
+    });
+    $("wr-import-text").value = "";
+    $("wr-importbox").hidden = true;
+    wr.dirty = true;
+    drawShots();
+    drawWriter();
+    toast("불러왔습니다 — 확인하고 저장을 누르세요");
+  });
   $("wr-photo").addEventListener("change", function(e){ var f = e.target.files; if(f && f.length) writerAddPhotos(f); this.value = ""; });
   $("wr-half").addEventListener("click", function(){ readWriter(); wr.d.size = "half"; wr.dirty = true; drawWriter(); });
   $("wr-full").addEventListener("click", function(){ readWriter(); wr.d.size = "full"; wr.dirty = true; drawWriter(); });
@@ -2213,9 +2273,10 @@ var FIREBASE_CONFIG = {
     if(a.dept) by.appendChild(mk("b", null, a.dept));
     by.appendChild(document.createTextNode((a.dept ? " · " : "") + (a.grade ? a.grade + " " : "") + a.name + " 기자"));
     art.appendChild(by);
-    if(a.lead && !edit){
+    if(a.lead){
       var ld = mk("p", "np-lead", a.lead);
-      ld.setAttribute("data-edit", "lead");
+      if(edit) editable(ld, "lead", "부제", true);
+      else ld.setAttribute("data-edit", "lead");
       art.appendChild(ld);
     }
     var main = mk("div", "np-main");
