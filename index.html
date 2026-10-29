@@ -217,6 +217,21 @@
   .filechip span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .filechip small{flex:0 0 auto; color:var(--muted); font-size:11px}
   .filechip button{flex:0 0 auto; border:0; background:transparent; color:var(--muted); cursor:pointer; padding:0 0 0 4px; font-size:12px}
+  /* 영상 — 드라이브 · 유튜브 링크와 올린 영상 파일은 사이트 안에서 재생 */
+  .vids{display:flex; flex-direction:column; gap:10px}
+  .vbox{max-width:640px}
+  .vplay, .vbox iframe, .vbox video{display:block; width:100%; aspect-ratio:16/9; border:0; border-radius:12px; background:#0B0B0F}
+  .vbox.folder iframe{aspect-ratio:auto; height:300px; background:#fff}
+  .vplay{position:relative; padding:0; overflow:hidden; cursor:pointer; border:1px solid var(--rule)}
+  .vplay img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.85}
+  .vplay .vbtn{position:absolute; left:50%; top:50%; width:58px; height:58px; margin:-29px 0 0 -29px; border-radius:50%;
+    background:rgba(0,0,0,.62); display:flex; align-items:center; justify-content:center}
+  .vplay .vbtn svg{width:24px; height:24px; fill:#fff; margin-left:3px}
+  .vplay:hover .vbtn, .vplay:focus-visible .vbtn{background:var(--onair)}
+  .vplay .vcap{position:absolute; left:10px; bottom:9px; right:10px; text-align:left; color:#fff; font-size:13px; font-weight:700;
+    text-shadow:0 1px 3px rgba(0,0,0,.8); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .vmeta{display:flex; gap:8px; flex-wrap:wrap; align-items:baseline; margin-top:5px; font-size:12px; color:var(--muted)}
+  .vmeta a{color:var(--k-video); text-decoration:underline}
   .photos{display:flex; gap:8px; flex-wrap:wrap}
   .photo{width:88px; height:88px; border-radius:10px; overflow:hidden; border:1px solid var(--rule); padding:0; background:var(--surface-2); cursor:zoom-in}
   .photo img{width:100%; height:100%; object-fit:cover; display:block}
@@ -654,8 +669,8 @@
       <textarea id="i-text" rows="8" placeholder="원고를 그대로 붙여 넣어도 됩니다."></textarea>
     </div>
     <div class="field">
-      <label for="i-link">링크 (없어도 됩니다)</label>
-      <input type="text" id="i-link" autocomplete="off" placeholder="https://">
+      <label for="i-link">링크 — 구글 드라이브 · 유튜브 영상은 사이트에서 바로 재생됩니다 (여러 개면 줄을 바꿔서)</label>
+      <textarea id="i-link" rows="2" autocomplete="off" placeholder="https://drive.google.com/file/d/…"></textarea>
     </div>
     <div class="field">
       <label>파일 · 사진</label>
@@ -1684,6 +1699,96 @@ var FIREBASE_CONFIG = {
     });
     return ps;
   }
+  /* 영상 링크 — 구글 드라이브 · 유튜브 영상은 사이트 안에서 바로 재생합니다.
+     원본 영상은 드라이브에 올리고(사이트는 한 파일 30MB), 링크만 붙이면 됩니다. */
+  function videoInfo(url){
+    var u = String(url || ""), m;
+    if(/^https?:\/\/(drive|docs)\.google\.com\//i.test(u)){
+      var rk = (u.match(/[?&]resourcekey=([\w-]+)/) || [])[1];
+      if((m = u.match(/\/folders\/([\w-]{10,})/)))
+        return {kind:"folder", src:"https://drive.google.com/embeddedfolderview?id=" + m[1] + (rk ? "&resourcekey=" + rk : "") + "#grid"};
+      if((m = u.match(/\/file\/d\/([\w-]{10,})/)) || (m = u.match(/[?&]id=([\w-]{10,})/)))
+        return {kind:"drive", src:"https://drive.google.com/file/d/" + m[1] + "/preview" + (rk ? "?resourcekey=" + rk : ""),
+                thumb:"https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w960"};
+      return null;
+    }
+    m = u.match(/^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:[^#]*&)?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([\w-]{11})/i);
+    if(m) return {kind:"youtube", src:"https://www.youtube-nocookie.com/embed/" + m[1] + "?autoplay=1&rel=0",
+                  thumb:"https://i.ytimg.com/vi/" + m[1] + "/hqdefault.jpg"};
+    return null;
+  }
+  function videoFrame(src, title){
+    var f = document.createElement("iframe");
+    f.src = src; f.title = title;
+    f.setAttribute("allow", "autoplay; encrypted-media; fullscreen; picture-in-picture");
+    f.setAttribute("allowfullscreen", "");
+    return f;
+  }
+  // 누르기 전에는 썸네일만 — 영상이 여럿이어도 화면이 무겁지 않게
+  function videoBox(url, name){
+    var v = videoInfo(url);
+    if(!v) return null;
+    var what = v.kind === "youtube" ? "유튜브" : (v.kind === "folder" ? "드라이브 폴더" : "구글 드라이브");
+    var box = el("div", "vbox" + (v.kind === "folder" ? " folder" : ""));
+    if(v.kind === "folder") box.appendChild(videoFrame(v.src, name || what));
+    else {
+      var b = el("button", "vplay");
+      b.type = "button";
+      b.setAttribute("aria-label", (name || "영상") + " 재생");
+      var im = document.createElement("img");
+      im.alt = ""; im.loading = "lazy";
+      im.onerror = function(){ if(im.parentNode) im.parentNode.removeChild(im); };
+      im.src = v.thumb;
+      b.appendChild(im);
+      var bt = el("span", "vbtn");
+      bt.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg>';
+      b.appendChild(bt);
+      if(name) b.appendChild(el("span", "vcap", name));
+      b.addEventListener("click", function(){ box.replaceChild(videoFrame(v.src, name || what), b); });
+      box.appendChild(b);
+    }
+    var meta = el("div", "vmeta");
+    meta.appendChild(el("span", null, what));
+    var a = el("a", null, "새 창에서 열기");
+    a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer";
+    meta.appendChild(a);
+    if(v.kind !== "youtube") meta.appendChild(el("span", null, "안 보이면 드라이브 공유를 ‘링크가 있는 모든 사용자’로"));
+    box.appendChild(meta);
+    return box;
+  }
+  // 링크 목록 — 영상은 플레이어로, 나머지는 그냥 링크로
+  function linkBlock(list){
+    var wrap = el("div", "vids"), lk = el("div", "links");
+    list.forEach(function(x){
+      var vb = videoBox(x.url, x.name && x.name !== x.url ? x.name : "");
+      if(vb){ wrap.appendChild(vb); return; }
+      var a = el("a", null, x.name || x.url);
+      a.href = x.url; a.target = "_blank"; a.rel = "noopener noreferrer";
+      lk.appendChild(a);
+    });
+    if(lk.firstChild) wrap.appendChild(lk);
+    return wrap;
+  }
+  function splitLinks(text){
+    return (String(text || "").match(/https?:\/\/\S+/gi) || []).map(function(u){ return {name:"", url:u}; });
+  }
+  // 사이트에 직접 올린 영상 파일(30MB 까지)
+  function videoFiles(files){
+    var vs = (files || []).filter(function(f){ return /^video\//.test(f.type || "") && f.url; });
+    if(!vs.length) return null;
+    var wrap = el("div", "vids");
+    vs.forEach(function(f){
+      var box = el("div", "vbox");
+      var v = document.createElement("video");
+      v.controls = true; v.preload = "metadata"; v.src = f.url;
+      v.setAttribute("playsinline", "");
+      box.appendChild(v);
+      box.appendChild(el("div", "vmeta", f.name || "영상"));
+      wrap.appendChild(box);
+    });
+    return wrap;
+  }
+
   /* 사진은 줄여서 사진 칸으로, 나머지는 파일 칸으로 — 고르개 하나로 둘 다 받습니다. */
   function mediaBox(filesId, shotsId, errId){
     return {
@@ -3342,16 +3447,10 @@ var FIREBASE_CONFIG = {
       ms.appendChild(secHead("기획 · 자료", ""));
       var box = el("div", "cards");
       if(p.body) box.appendChild(richBlock(p.body, "p" + p.id));
-      if(p.links && p.links.length){
-        var lk = el("div", "links");
-        p.links.forEach(function(x){
-          var a = el("a", null, x.name || x.url);
-          a.href = x.url; a.target = "_blank"; a.rel = "noopener noreferrer";
-          lk.appendChild(a);
-        });
-        box.appendChild(lk);
-      }
+      if(p.links && p.links.length) box.appendChild(linkBlock(p.links));
       if(p.photos && p.photos.length) box.appendChild(photoRow(p.photos, p.title));
+      var pv = videoFiles(p.files);
+      if(pv) box.appendChild(pv);
       if(p.files && p.files.length) box.appendChild(fileChips(p.files));
       ms.appendChild(box);
       wrap.appendChild(ms);
@@ -3380,14 +3479,10 @@ var FIREBASE_CONFIG = {
         h.appendChild(el("span", null, timeText(x.updatedAt || x.createdAt)));
         card.appendChild(h);
         if(x.text) card.appendChild(richBlock(x.text, "i" + x.id));
-        if(x.link){
-          var la = el("a", null, x.link);
-          la.href = x.link; la.target = "_blank"; la.rel = "noopener noreferrer";
-          var ll = el("div", "links");
-          ll.appendChild(la);
-          card.appendChild(ll);
-        }
+        if(x.link) card.appendChild(linkBlock(splitLinks(x.link)));
         if(x.photos && x.photos.length) card.appendChild(photoRow(x.photos, (x.name || "부원") + " " + (x.label || "")));
+        var iv = videoFiles(x.files);
+        if(iv) card.appendChild(iv);
         if(x.files && x.files.length) card.appendChild(fileChips(x.files));
         if(State.teacher || x.uid === myUid()){
           var t = el("div", "tools");
@@ -4006,8 +4101,10 @@ var FIREBASE_CONFIG = {
     e.preventDefault();
     $("it-err").hidden = true;
     if(!itemProd) return;
-    var text = $("i-text").value.trim(), link = $("i-link").value.trim();
-    if(link && !/^https?:\/\//i.test(link)){ showErr("it-err", "링크는 http:// 또는 https:// 로 시작해야 합니다."); return; }
+    var text = $("i-text").value.trim();
+    var links = $("i-link").value.trim().split(/\s+/).filter(Boolean);
+    if(links.some(function(u){ return !/^https?:\/\//i.test(u); })){ showErr("it-err", "링크는 http:// 또는 https:// 로 시작해야 합니다. 여러 개면 줄을 바꿔서 붙여 주세요."); return; }
+    var link = links.join(String.fromCharCode(10));
     if(!text && !link && !iMedia.files.length && !iMedia.shots.length){ showErr("it-err", "내용이나 링크, 파일 중 하나는 있어야 합니다."); return; }
     var was = editingItem;
     var id = was ? was.id : uid();
