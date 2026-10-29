@@ -670,22 +670,22 @@
   <h2 id="it-title">내 원고 올리기</h2>
   <p class="lead" id="it-lead"></p>
   <form id="it-form">
-    <div class="field">
+    <div class="field" id="i-f-label">
       <label>무엇인가요</label>
       <div class="chips" id="i-label"></div>
     </div>
-    <div class="field">
-      <label for="i-text">내용</label>
+    <div class="field" id="i-f-text">
+      <label for="i-text" id="i-text-lb">내용</label>
       <textarea id="i-text" rows="8" placeholder="원고를 그대로 붙여 넣어도 됩니다."></textarea>
     </div>
-    <div class="field">
-      <label for="i-link">링크 — 구글 드라이브 · 유튜브 영상은 사이트에서 바로 재생됩니다 (여러 개면 줄을 바꿔서)</label>
+    <div class="field" id="i-f-link">
+      <label for="i-link" id="i-link-lb">링크 — 구글 드라이브 · 유튜브 영상은 사이트에서 바로 재생됩니다 (여러 개면 줄을 바꿔서)</label>
       <textarea id="i-link" rows="2" autocomplete="off" placeholder="https://drive.google.com/file/d/…"></textarea>
     </div>
-    <div class="field">
-      <label>파일 · 사진</label>
+    <div class="field" id="i-f-file">
+      <label id="i-file-lb">파일 · 사진</label>
       <label class="filepick">
-        <b>고르기</b>
+        <b id="i-file-go">고르기</b>
         <span id="i-file-hint">한글·워드·PDF·사진 · 한 파일 30MB</span>
         <input type="file" id="i-file" multiple hidden>
       </label>
@@ -1327,6 +1327,7 @@ var FIREBASE_CONFIG = {
   };
   var KIND_ORDER = ["air", "paper", "video", "event"];
   var ITEM_LABELS = ["원고", "대본", "큐시트", "콘티", "영상", "사진", "기타"];
+  var VIDEO_LABELS = ["영상", "사진", "인터뷰"];
   var LAST = 4;   // 단계는 0~4, 4 가 마지막(아카이브)
 
   /* ================= 상태 ================= */
@@ -3558,13 +3559,14 @@ var FIREBASE_CONFIG = {
     var items = itemsOf(p.id);
     var addB = null;
     if(canWrite() && p.status === "go"){
-      addB = el("button", "link-btn", "＋ 내 원고 올리기");
+      addB = el("button", "link-btn", p.kind === "video" ? "＋ 영상 · 사진 올리기" : "＋ 내 원고 올리기");
       addB.type = "button";
       addB.addEventListener("click", function(){ openItem(p, null); });
     }
-    is.appendChild(secHead("원고 · 대본 " + (items.length ? items.length : ""), "", addB));
+    is.appendChild(secHead((p.kind === "video" ? "올라온 영상 · 사진 " : "원고 · 대본 ") + (items.length ? items.length : ""), "", addB));
     if(State.cloud && !canWrite()) is.appendChild(emptyBox("부원만 볼 수 있어요", ""));
-    else if(!items.length) is.appendChild(emptyBox("아직 올라온 원고가 없어요", p.status === "go" ? "맡은 부분을 올려 주세요" : "채택된 뒤에 올릴 수 있습니다"));
+    else if(!items.length) is.appendChild(emptyBox(p.kind === "video" ? "아직 올라온 영상이 없어요" : "아직 올라온 원고가 없어요",
+      p.status === "go" ? (p.kind === "video" ? "찍은 영상과 사진을 올려 주세요" : "맡은 부분을 올려 주세요") : "채택된 뒤에 올릴 수 있습니다"));
     else {
       var ib = el("div", "cards");
       items.forEach(function(x){
@@ -4171,19 +4173,23 @@ var FIREBASE_CONFIG = {
   });
 
   /* ---------------- 원고 시트 ---------------- */
-  var itemProd = null, editingItem = null, itemLabel = "원고";
+  var itemProd = null, editingItem = null, itemLabel = "원고", itemLabels = ITEM_LABELS;
   var iMedia = mediaBox("i-files", "i-shots", "it-err",
     {link: "i-link", folder: function(){ return itemProd ? itemProd.title : ""; }});
   function pickHints(){
     var on = driveOn();
-    $("i-file-hint").textContent = on ? "한글·워드·PDF·사진 · 한 파일 30MB · 영상은 크기 상관없이 선생님 드라이브로" : "한글·워드·PDF·사진 · 한 파일 30MB";
+    var vid = itemProd && itemProd.kind === "video";
+    $("i-file-hint").textContent = vid
+      ? (on ? "휴대폰 사진첩에서 바로 골라요 · 영상은 크기 상관없이 선생님 드라이브로 올라가고, 사진은 여기 바로 올라갑니다"
+            : "사진 · 30MB 이하 짧은 영상 · 긴 영상은 드라이브에 올리고 링크를 붙여 주세요")
+      : (on ? "한글·워드·PDF·사진 · 한 파일 30MB · 영상은 크기 상관없이 선생님 드라이브로" : "한글·워드·PDF·사진 · 한 파일 30MB");
     $("p-file-hint").textContent = on ? "PDF·한글·사진 · 한 파일 30MB · 영상은 크기 상관없이 선생님 드라이브로" : "PDF·한글·영상 썸네일 등 · 한 파일 30MB · 사진은 Ctrl+V 로 붙여 넣어도 됩니다";
   }
   $("i-file").addEventListener("change", function(e){ iMedia.add(e.target.files); this.value = ""; });
   function renderItemLabels(){
     var box = $("i-label");
     clear(box);
-    ITEM_LABELS.forEach(function(l){
+    itemLabels.forEach(function(l){
       var c = el("button", "chip", l);
       c.type = "button";
       c.setAttribute("aria-pressed", itemLabel === l ? "true" : "false");
@@ -4198,9 +4204,24 @@ var FIREBASE_CONFIG = {
     itemProd = p;
     editingItem = x;
     var roles = myCredits(p).map(function(c){ return c.role; });
-    itemLabel = x ? (x.label || "원고") : (p.kind === "air" ? "대본" : (p.kind === "video" ? "콘티" : (p.kind === "event" ? "큐시트" : "원고")));
+    var vid = p.kind === "video";
+    itemLabel = x ? (x.label || "원고") : (p.kind === "air" ? "대본" : (vid ? "영상" : (p.kind === "event" ? "큐시트" : "원고")));
+    itemLabels = vid ? VIDEO_LABELS : ITEM_LABELS;
+    if(itemLabels.indexOf(itemLabel) < 0) itemLabels = itemLabels.concat([itemLabel]);
     renderItemLabels();
-    $("it-title").textContent = x ? "원고 고치기" : "내 원고 올리기";
+    // 영상 작품은 '고르기'를 맨 위로 — 사진첩에서 영상·사진을 바로 고르게
+    var form = $("it-form");
+    (vid ? ["i-f-label", "i-f-file", "i-f-text", "i-f-link"] : ["i-f-label", "i-f-text", "i-f-link", "i-f-file"])
+      .forEach(function(id){ form.insertBefore($(id), $("it-err")); });
+    $("i-file").accept = vid ? "video/*,image/*" : "";
+    $("i-file-lb").textContent = vid ? "영상 · 사진 올리기" : "파일 · 사진";
+    $("i-file-go").textContent = vid ? "＋ 영상 · 사진 고르기" : "고르기";
+    $("i-text-lb").textContent = vid ? "설명 (없어도 됩니다)" : "내용";
+    $("i-text").rows = vid ? 3 : 8;
+    $("i-text").placeholder = vid ? "어떤 장면인지 — 예) 오프닝 · 교문 등굣길 · 8초 / 인터뷰는 누구에게 무엇을 물었는지" : "원고를 그대로 붙여 넣어도 됩니다.";
+    $("i-link-lb").textContent = vid ? "링크 — 올린 영상은 여기 저절로 들어갑니다. 드라이브·유튜브에 이미 올린 영상이면 주소를 붙여 넣어도 돼요"
+                                     : "링크 — 구글 드라이브 · 유튜브 영상은 사이트에서 바로 재생됩니다 (여러 개면 줄을 바꿔서)";
+    $("it-title").textContent = x ? (vid ? "올린 것 고치기" : "원고 고치기") : (vid ? "영상 · 사진 올리기" : "내 원고 올리기");
     $("it-lead").textContent = p.title + (roles.length ? " · 내 역할 " + roles.join("·") : "") + " · " + whenText(p);
     $("i-text").value = x ? x.text : "";
     $("i-link").value = x ? x.link : "";
@@ -4209,7 +4230,7 @@ var FIREBASE_CONFIG = {
     $("i-delete").hidden = !x;
     $("it-err").hidden = true;
     openSheet("sheet-item");
-    setTimeout(function(){ $("i-text").focus(); }, 200);
+    if(!vid) setTimeout(function(){ $("i-text").focus(); }, 200);
   }
   $("it-form").addEventListener("submit", function(e){
     e.preventDefault();
