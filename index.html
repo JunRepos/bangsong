@@ -232,6 +232,16 @@
     text-shadow:0 1px 3px rgba(0,0,0,.8); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .vmeta{display:flex; gap:8px; flex-wrap:wrap; align-items:baseline; margin-top:5px; font-size:12px; color:var(--muted)}
   .vmeta a{color:var(--k-video); text-decoration:underline}
+  .vups{display:flex; flex-direction:column; gap:6px; margin-top:8px}
+  .vup{border:1px solid var(--rule); background:var(--surface-2); border-radius:9px; padding:8px 10px; font-size:12.5px}
+  .vup .vt{display:flex; gap:8px; align-items:baseline}
+  .vup .vt b{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .vup .vt span{flex:0 0 auto; color:var(--muted); font-variant-numeric:tabular-nums}
+  .vup .bar{height:5px; border-radius:3px; background:var(--rule); margin-top:6px; overflow:hidden}
+  .vup .bar i{display:block; height:100%; background:var(--k-video); transition:width .3s}
+  .vup.done .bar i{background:#3ECF8E}
+  .vup.fail{border-color:var(--onair)}
+  .vup.fail .vt span{color:var(--onair); white-space:normal}
   .photos{display:flex; gap:8px; flex-wrap:wrap}
   .photo{width:88px; height:88px; border-radius:10px; overflow:hidden; border:1px solid var(--rule); padding:0; background:var(--surface-2); cursor:zoom-in}
   .photo img{width:100%; height:100%; object-fit:cover; display:block}
@@ -640,7 +650,7 @@
       <label>파일 · 사진</label>
       <label class="filepick">
         <b>고르기</b>
-        <span>PDF·한글·영상 썸네일 등 · 한 파일 30MB · 사진은 Ctrl+V 로 붙여 넣어도 됩니다</span>
+        <span id="p-file-hint">PDF·한글·영상 썸네일 등 · 한 파일 30MB · 사진은 Ctrl+V 로 붙여 넣어도 됩니다</span>
         <input type="file" id="p-file" multiple hidden>
       </label>
       <div class="files" id="p-files" style="margin-top:8px"></div>
@@ -676,7 +686,7 @@
       <label>파일 · 사진</label>
       <label class="filepick">
         <b>고르기</b>
-        <span>한글·워드·PDF·사진 · 한 파일 30MB</span>
+        <span id="i-file-hint">한글·워드·PDF·사진 · 한 파일 30MB</span>
         <input type="file" id="i-file" multiple hidden>
       </label>
       <div class="files" id="i-files" style="margin-top:8px"></div>
@@ -758,6 +768,11 @@
     <div class="field">
       <label for="c-slogan">한 줄 소개</label>
       <input type="text" id="c-slogan" autocomplete="off" placeholder="예) 우리가 만드는 진로 이야기">
+    </div>
+    <div class="field">
+      <label for="c-drive">영상 받을 구글 드라이브 — Apps Script 웹 앱 주소 (없으면 비워 두기)</label>
+      <input type="text" id="c-drive" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec" style="font-family:var(--mono); font-size:12.5px">
+      <p class="hint" style="margin:6px 0 0; font-size:12px; color:var(--muted)">넣어 두면 부원이 고른 영상이 크기 제한 없이 선생님 드라이브 ‘방송부 영상’ 폴더로 올라가고, 사이트에서 바로 재생됩니다. 만드는 법은 README 의 ‘영상을 선생님 드라이브로’.</p>
     </div>
     <p class="form-err" id="if-err" hidden></p>
     <div class="sheet-actions">
@@ -1471,7 +1486,7 @@ var FIREBASE_CONFIG = {
 
         FB.db.collection("bcInfo").doc("main").onSnapshot(function(doc){
           var v = doc.exists ? (doc.data() || {}) : {};
-          State.info = {name: v.name || "신동고 방송부", slogan: v.slogan || ""};
+          State.info = {name: v.name || "신동고 방송부", slogan: v.slogan || "", driveUp: v.driveUp || ""};
           render();
         }, quiet);
 
@@ -1789,10 +1804,86 @@ var FIREBASE_CONFIG = {
     return wrap;
   }
 
-  /* 사진은 줄여서 사진 칸으로, 나머지는 파일 칸으로 — 고르개 하나로 둘 다 받습니다. */
-  function mediaBox(filesId, shotsId, errId){
+  /* 영상을 선생님 구글 드라이브로 — 선생님 계정의 Apps Script 웹 앱(drive-upload.gs)이 받아서
+     드라이브의 이어 올리기(resumable)로 8MB 씩 넘깁니다. 크기 제한이 없고, 다 올라가면 보기 링크를 돌려줍니다. */
+  var DRIVE_CHUNK = 8 * 1024 * 1024;   // 256KB 의 배수여야 합니다
+  function driveOn(){ return !!(State.cloud && State.info.driveUp && FB.auth && FB.auth.currentUser); }
+  function driveCall(body, tries){
+    tries = tries || 0;
+    return fetch(State.info.driveUp, {method: "POST", body: JSON.stringify(body)})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if(j.error){ var e = new Error(j.error); e.hard = true; throw e; } return j; })
+      ["catch"](function(e){
+        // 잠깐 끊기거나 한꺼번에 몰리면 조금 쉬었다가 다시
+        if(e.hard || tries >= 4) throw e;
+        return new Promise(function(res){ setTimeout(res, 2000 * (tries + 1)); })
+          .then(function(){ return driveCall(body, tries + 1); });
+      });
+  }
+  function driveUpload(file, folder, onPct, job){
+    return FB.auth.currentUser.getIdToken().then(function(tok){
+      return driveCall({op: "start", token: tok, name: file.name || "영상", type: file.type || "video/mp4", size: file.size, folder: folder || ""});
+    }).then(function(s){
+      function send(off){
+        if(job && job.stop) throw new Error("멈췄습니다");
+        var part = file.slice(off, Math.min(off + DRIVE_CHUNK, file.size));
+        return blobToDataURL(part).then(function(u){
+          return driveCall({op: "chunk", id: s.id, offset: off, data: u.slice(u.indexOf(",") + 1)});
+        }).then(function(r){
+          if(r.done){ onPct(100); return r; }
+          onPct(Math.min(99, Math.floor(r.next / file.size * 100)));
+          return send(r.next);
+        });
+      }
+      return send(0);
+    });
+  }
+
+  /* 사진은 줄여서 사진 칸으로, 나머지는 파일 칸으로 — 고르개 하나로 둘 다 받습니다.
+     영상은 선생님 드라이브가 이어져 있으면 그쪽으로 올리고, 보기 링크를 링크 칸에 넣습니다. */
+  function mediaBox(filesId, shotsId, errId, opt){
+    opt = opt || {};
     return {
-      files: [], shots: [],
+      files: [], shots: [], ups: [],
+      busy: function(){ return this.ups.some(function(u){ return u.state === "up"; }); },
+      stopAll: function(){ this.ups.forEach(function(u){ u.stop = true; }); },
+      drawUps: function(){
+        var fb = $(filesId), box = $(filesId + "-up");
+        if(!box){ box = el("div", "vups"); box.id = filesId + "-up"; fb.parentNode.insertBefore(box, fb.nextSibling); }
+        clear(box);
+        this.ups.forEach(function(u){
+          var r = el("div", "vup" + (u.state === "done" ? " done" : (u.state === "fail" ? " fail" : "")));
+          var t = el("div", "vt");
+          t.appendChild(el("b", null, u.name));
+          t.appendChild(el("span", null,
+            u.state === "up" ? u.pct + "% · 선생님 드라이브로 올리는 중 — 창을 닫지 마세요"
+            : u.state === "done" ? (u.shared ? "올라갔습니다 · 링크 칸에 넣었어요" : "올라갔지만 공유가 막혀 선생님만 볼 수 있어요")
+            : u.msg));
+          r.appendChild(t);
+          if(u.state !== "fail"){
+            var bar = el("div", "bar"), i = el("i");
+            i.style.width = u.pct + "%";
+            bar.appendChild(i); r.appendChild(bar);
+          }
+          box.appendChild(r);
+        });
+      },
+      toDrive: function(f){
+        var self = this, u = {name: f.name || "영상", pct: 0, state: "up", stop: false};
+        this.ups.push(u);
+        this.drawUps();
+        driveUpload(f, opt.folder ? opt.folder() : "", function(pct){ u.pct = pct; self.drawUps(); }, u).then(function(r){
+          u.state = "done"; u.pct = 100; u.shared = r.shared !== false;
+          var t = $(opt.link), line = (opt.named ? (f.name || "영상").replace(/\s+/g, " ") + " " : "") + r.url;
+          if(t) t.value = (t.value.trim() ? t.value.trim() + String.fromCharCode(10) : "") + line;
+          markSheetTouched();
+          self.drawUps();
+        })["catch"](function(e){
+          u.state = "fail";
+          u.msg = u.stop ? "멈췄습니다" : ((e && e.hard ? e.message : "올리지 못했습니다. 인터넷을 확인하고 다시 골라 주세요.") || "올리지 못했습니다.");
+          self.drawUps();
+        });
+      },
       render: function(){
         var self = this;
         var fb = $(filesId); clear(fb);
@@ -1818,7 +1909,12 @@ var FIREBASE_CONFIG = {
       add: function(list){
         var self = this, added = 0, msg = "";
         Array.prototype.forEach.call(list || [], function(f){
-          if(f.size > MAX_FILE){ msg = (f.name || "파일") + " 은(는) 30MB 가 넘습니다."; return; }
+          var isVid = /^video\//.test(f.type || "");
+          if(isVid && opt.link && driveOn()){ self.toDrive(f); added++; return; }
+          if(f.size > MAX_FILE){
+            msg = (f.name || "파일") + " 은(는) 30MB 가 넘습니다." + (isVid ? " 구글 드라이브에 올리고 링크를 붙여 주세요." : "");
+            return;
+          }
           if(/^image\//.test(f.type || "")){
             if(self.shots.length >= 6){ msg = "사진은 6장까지입니다."; return; }
             self.shots.push({file:f, preview: URL.createObjectURL(f)});
@@ -1834,6 +1930,7 @@ var FIREBASE_CONFIG = {
         return added;
       },
       load: function(files, photos){
+        this.stopAll(); this.ups = []; this.drawUps();
         this.files = (files || []).map(function(f){ return {url:f.url, path:f.path, name:f.name, size:f.size, type:f.type}; });
         this.shots = (photos || []).map(function(p){ return {url:p.url, path:p.path}; });
         this.render();
@@ -1856,7 +1953,7 @@ var FIREBASE_CONFIG = {
         }, seq);
         return seq.then(function(){ return {photos:photos, files:files}; });
       },
-      reset: function(){ this.files = []; this.shots = []; }
+      reset: function(){ this.stopAll(); this.files = []; this.shots = []; this.ups = []; }
     };
   }
 
@@ -3710,9 +3807,16 @@ var FIREBASE_CONFIG = {
     SHEETS.forEach(function(id){ $(id).classList.remove("open"); });
   }
   function askClose(){
-    if(sheetTouched && !window.confirm("쓰던 내용이 있습니다. 저장하지 않고 닫을까요?")) return;
+    if(iMedia.busy() || pMedia.busy()){
+      if(!window.confirm("영상이 아직 선생님 드라이브로 올라가는 중입니다. 닫으면 멈춥니다. 닫을까요?")) return;
+      iMedia.stopAll(); pMedia.stopAll();
+    }
+    else if(sheetTouched && !window.confirm("쓰던 내용이 있습니다. 저장하지 않고 닫을까요?")) return;
     closeSheets();
   }
+  window.addEventListener("beforeunload", function(e){
+    if(iMedia.busy() || pMedia.busy()){ e.preventDefault(); e.returnValue = ""; }
+  });
   $("scrim").addEventListener("click", askClose);
   Array.prototype.forEach.call(document.querySelectorAll("[data-close]"), function(b){
     b.addEventListener("click", askClose);
@@ -3893,7 +3997,8 @@ var FIREBASE_CONFIG = {
 
   /* ---------------- 작품 시트 ---------------- */
   var editingProd = null, pickKind = "air", crewRows = [];
-  var pMedia = mediaBox("p-files", "p-shots", "pd-err");
+  var pMedia = mediaBox("p-files", "p-shots", "pd-err",
+    {link: "p-links", named: true, folder: function(){ return $("p-title").value.trim(); }});
   $("p-file").addEventListener("change", function(e){ pMedia.add(e.target.files); this.value = ""; });
   function renderKindPick(){
     var box = $("p-kind");
@@ -4004,6 +4109,7 @@ var FIREBASE_CONFIG = {
     renderCrewRows();
     $("p-links").value = ((p && p.links) || []).map(function(x){ return (x.name && x.name !== x.url ? x.name + " " : "") + x.url; }).join(String.fromCharCode(10));
     pMedia.load(p && p.files, p && p.photos);
+    pickHints();
     $("p-save").textContent = pitch ? "기획안 올리기" : "저장";
     $("p-delete").hidden = !p;
     $("pd-err").hidden = true;
@@ -4018,6 +4124,7 @@ var FIREBASE_CONFIG = {
     var time = $("p-time").value.trim();
     if(time && !/^([01]?\d|2[0-3]):[0-5]\d$/.test(time)){ showErr("pd-err", "시각은 12:40 처럼 적어 주세요."); return; }
     if(time.length === 4) time = "0" + time;
+    if(pMedia.busy()){ showErr("pd-err", "영상이 아직 올라가는 중입니다. 다 올라간 뒤 저장해 주세요."); return; }
     var lk = parseLinks($("p-links").value);
     if(lk.bad.length){ showErr("pd-err", "링크를 찾지 못한 줄이 있습니다: " + lk.bad.slice(0, 2).join(" / ")); return; }
     var was = editingProd;
@@ -4065,7 +4172,13 @@ var FIREBASE_CONFIG = {
 
   /* ---------------- 원고 시트 ---------------- */
   var itemProd = null, editingItem = null, itemLabel = "원고";
-  var iMedia = mediaBox("i-files", "i-shots", "it-err");
+  var iMedia = mediaBox("i-files", "i-shots", "it-err",
+    {link: "i-link", folder: function(){ return itemProd ? itemProd.title : ""; }});
+  function pickHints(){
+    var on = driveOn();
+    $("i-file-hint").textContent = on ? "한글·워드·PDF·사진 · 한 파일 30MB · 영상은 크기 상관없이 선생님 드라이브로" : "한글·워드·PDF·사진 · 한 파일 30MB";
+    $("p-file-hint").textContent = on ? "PDF·한글·사진 · 한 파일 30MB · 영상은 크기 상관없이 선생님 드라이브로" : "PDF·한글·영상 썸네일 등 · 한 파일 30MB · 사진은 Ctrl+V 로 붙여 넣어도 됩니다";
+  }
   $("i-file").addEventListener("change", function(e){ iMedia.add(e.target.files); this.value = ""; });
   function renderItemLabels(){
     var box = $("i-label");
@@ -4092,6 +4205,7 @@ var FIREBASE_CONFIG = {
     $("i-text").value = x ? x.text : "";
     $("i-link").value = x ? x.link : "";
     iMedia.load(x && x.files, x && x.photos);
+    pickHints();
     $("i-delete").hidden = !x;
     $("it-err").hidden = true;
     openSheet("sheet-item");
@@ -4101,6 +4215,7 @@ var FIREBASE_CONFIG = {
     e.preventDefault();
     $("it-err").hidden = true;
     if(!itemProd) return;
+    if(iMedia.busy()){ showErr("it-err", "영상이 아직 올라가는 중입니다. 다 올라간 뒤 저장해 주세요."); return; }
     var text = $("i-text").value.trim();
     var links = $("i-link").value.trim().split(/\s+/).filter(Boolean);
     if(links.some(function(u){ return !/^https?:\/\//i.test(u); })){ showErr("it-err", "링크는 http:// 또는 https:// 로 시작해야 합니다. 여러 개면 줄을 바꿔서 붙여 주세요."); return; }
@@ -4160,6 +4275,7 @@ var FIREBASE_CONFIG = {
   function openInfo(){
     $("c-name").value = State.info.name || "";
     $("c-slogan").value = State.info.slogan || "";
+    $("c-drive").value = State.info.driveUp || "";
     $("if-err").hidden = true;
     openSheet("sheet-info");
   }
@@ -4167,7 +4283,9 @@ var FIREBASE_CONFIG = {
     e.preventDefault();
     var name = $("c-name").value.trim();
     if(!name){ showErr("if-err", "방송국 이름을 적어 주세요."); return; }
-    var body = {name:name, slogan:$("c-slogan").value.trim(), updatedAt:Date.now()};
+    var drive = $("c-drive").value.trim();
+    if(drive && !/^https:\/\/script\.google\.com\/.+\/exec$/.test(drive)){ showErr("if-err", "Apps Script 웹 앱 주소는 https://script.google.com/… 으로 시작하고 /exec 로 끝납니다."); return; }
+    var body = {name:name, slogan:$("c-slogan").value.trim(), driveUp:drive, updatedAt:Date.now()};
     var work = State.cloud
       ? FB.db.collection("bcInfo").doc("main").set(body)
       : (State.info = body, Local.save(), Promise.resolve());
