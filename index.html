@@ -412,9 +412,19 @@
   .note-body h3{margin:12px 0 6px; font-size:13px; color:var(--muted); letter-spacing:.04em}
   .note-ev{margin:0 0 12px; padding-left:1.1em; font-size:13px; line-height:1.6; color:var(--ink-2)}
   .note-ev li{margin-bottom:3px}
-  .note-body .field{margin-top:12px}
+  .note-body .field{margin-top:10px}
+  .note-body .field .tools{display:inline-flex}
   .note-count{font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; margin:-6px 0 6px; text-align:right}
   .note-count.over{color:var(--onair); font-weight:700}
+  .acts{display:flex; flex-direction:column; gap:6px}
+  .act-row{display:flex; gap:12px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; border:1px solid var(--rule); background:var(--surface); border-radius:12px; padding:11px 14px}
+  .act-main{flex:1 1 260px; min-width:0}
+  .act-h{display:flex; gap:10px; align-items:baseline; flex-wrap:wrap}
+  .act-date{font-family:var(--mono); font-size:12px; color:var(--muted)}
+  .act-main p{margin:4px 0 2px; font-size:13px; color:var(--ink-2)}
+  .act-main small{font-size:12px; color:var(--muted)}
+  .act-form{border:1px dashed var(--ink-2); border-radius:12px; padding:12px 14px; background:var(--surface)}
+  .act-len{font-size:11.5px; color:var(--muted)}
   .note-chk{margin:0 0 8px; padding-left:1.1em; font-size:12.5px; color:#F2C94C; line-height:1.55}
   .codebox{font-family:var(--mono); font-size:30px; font-weight:600; letter-spacing:.2em; text-align:center; padding:16px; border:1px dashed var(--rule); border-radius:12px; background:var(--surface)}
 
@@ -1295,7 +1305,7 @@ var FIREBASE_CONFIG = {
     me: lsGet("bs.me") || null,
     info: {name:"신동고 방송부", slogan:""},
     code: "",
-    prods: [], items: [], comments: [], members: [], events: [], notes: {},
+    prods: [], items: [], comments: [], members: [], events: [], notes: {}, acts: null,
     duty: {mon:[], tue:[], wed:[], thu:[], fri:[]},
     tab: lsGet("bs.tab") || "onair", kindFilter: "all", detailId: null, open: {}
   };
@@ -1392,6 +1402,7 @@ var FIREBASE_CONFIG = {
       State.comments = lsGet("bs.comments") || [];
       State.members = lsGet("bs.members") || [];
       State.notes = lsGet("bs.notes") || {};
+      State.acts = lsGet("bs.acts") || null;
       State.events = lsGet("bs.events") || [];
       State.duty = lsGet("bs.duty") || State.duty;
       State.teacher = !!lsGet("bs.teacherMode");
@@ -1497,8 +1508,13 @@ var FIREBASE_CONFIG = {
     if(!key){ State.items = []; State.comments = []; State.members = []; State.notes = {}; return; }
     if(State.teacher){
       gated.push(FB.db.collection("bcJoin").onSnapshot(function(snap){
-        var notes = {};
-        snap.docs.forEach(function(d){ var v = d.data() || {}; if(v.kind === "note" && v.key) notes[v.key] = v; });
+        var notes = {}, acts = null;
+        snap.docs.forEach(function(d){
+          var v = d.data() || {};
+          if(v.kind === "note" && v.key) notes[v.key] = v;
+          else if(v.kind === "acts" && Array.isArray(v.list)) acts = v.list;
+        });
+        State.acts = acts;
         // 아직 서버에 닿지 않은, 방금 쓴 내용은 그대로 둡니다
         Object.keys(State.notes).forEach(function(k){
           var l = State.notes[k];
@@ -2616,11 +2632,15 @@ var FIREBASE_CONFIG = {
   var NOTE_MAX = 500, NOTE_BYTES = 1500;
   var noteOpen = {}, noteTimers = {};
   function noteDocId(key){ return "note-" + String(key).replace(/[^0-9A-Za-z가-힣_:-]/g, "_"); }
-  function noteOf(key){ return State.notes[key] || {memo: "", draft: ""}; }
+  function noteOf(key){ return State.notes[key] || {memo: "", draft: "", acts: {}}; }
+  // field: "memo" · "draft" · "act:활동id"
   function saveNote(pp, field, val){
     var cur = noteOf(pp.key);
-    var next = {kind: "note", key: pp.key, name: pp.name, sid: pp.sid || "", memo: cur.memo || "", draft: cur.draft || "", updatedAt: Date.now()};
-    next[field] = val;
+    var acts = {};
+    Object.keys(cur.acts || {}).forEach(function(k){ acts[k] = cur.acts[k]; });
+    var next = {kind: "note", key: pp.key, name: pp.name, sid: pp.sid || "", memo: cur.memo || "", draft: cur.draft || "", acts: acts, updatedAt: Date.now()};
+    if(field.indexOf("act:") === 0) acts[field.slice(4)] = val;
+    else next[field] = val;
     State.notes[pp.key] = next;
     clearTimeout(noteTimers[pp.key + field]);
     noteTimers[pp.key + field] = setTimeout(function(){
@@ -2725,41 +2745,72 @@ var FIREBASE_CONFIG = {
     // 괄호 속 설명을 먼저 빼고, ‘ · ’나 쉼표로 나눈 앞의 몇 개만
     return String(t || "").replace(/\([^)]*\)/g, "").split(/\s·\s|[,\n]|\s및\s/).map(function(x){ return x.trim(); }).filter(Boolean).slice(0, n || 2).join(", ");
   }
-  function draftFor(pp){
-    var parts = [];
-    columnsOf(pp).forEach(function(c){
-      var topic = c.dept || "희망 진로";
-      var s = "진로 신문 제작 활동에서 기자를 맡아 " + josa(topic, "을", "를") + " 주제로 한 칼럼 ‘" + (c.headline || "") + "’" + (hasBatchim(c.headline || "") ? "을" : "를") + " 작성함.";
-      var fut = listHead(c.future, 2), prep = listHead(c.prepare || c.learn, 2);
-      if(fut || prep){
-        var need = prep ? "이를 위해 필요한 " + prep : "";
-        var obj = fut && prep ? fut + " 등의 진로와 " + need : (fut ? fut + " 등의 진로" : need);
-        s += " 조사한 내용을 바탕으로 " + josa(obj, "을", "를") + " 정리함.";
-      }
-      var n = (c.photos || []).length, st = c.style || {};
-      if(n || st.pos || st.color) s += " " + (n ? "사진 " + n + "장을 골라 설명을 달고 " : "") + (st.pos || st.size || st.color ? "사진 배치와 기사 색을 스스로 정해 " : "") + (c.size === "full" ? "한 면" : "반 면") + " 지면을 구성함.";
-      if(c.message) s += " 독자에게 ‘" + firstSentence(c.message, 45) + "’라는 메시지를 전함.";
-      parts.push(s);
-    });
-    State.prods.filter(function(p){ return p.status === "go"; }).forEach(function(p){
-      (p.credits || []).forEach(function(c){
-        if(c.name === pp.name || (c.uid && pp.uids.indexOf(c.uid) >= 0)){
-          var k = kindOf(p);
-          parts.push(k.label + " ‘" + p.title + "’ 제작에서 " + josa(c.role || "제작진", "을", "를") + " 맡음.");
-        }
-      });
-    });
-    if(!parts.length) parts.push("[이번 학기 활동 내용을 적어 주세요]");
-    parts.push("[관찰: 활동 과정에서 보인 태도 · 역할 · 변화를 1~2문장으로]");
-    // 학생 글에 섞인 상호명은 일반 명사로
-    return parts.join(" ").replace(/유튜브|YouTube/gi, "동영상 공유").replace(/넷플릭스|Netflix|티빙|웨이브|디즈니\+?/gi, "OTT")
+  /* ---------------- 활동 (부원 모두에게 공통) ----------------
+     선생님이 활동을 더하면 부원마다 그 활동의 메모 칸이 생깁니다. 처음에는 진로 신문 활동 하나가 들어 있습니다. */
+  var PAPER_ACT = {id: "paper-20261028", title: "진로 신문 ‘나의 학과를 소개해!’ 제작", date: "2026-10-28",
+    desc: "지망 학과 · 관심 분야를 조사해 칼럼을 쓰고 신문 지면을 구성함", source: "paper"};
+  var actEditing = null;   // 고치는 활동 id, 새로 만들 때는 "new"
+  function actsList(){
+    var l = (State.acts ? State.acts : [PAPER_ACT]).slice();
+    return l.sort(function(a, b){ return (a.date || "") < (b.date || "") ? -1 : ((a.date || "") > (b.date || "") ? 1 : 0); });
+  }
+  function saveActs(list){
+    // 입력 칸에 커서가 남아 있으면 화면이 다시 그려지지 않으므로 먼저 놓습니다
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    State.acts = list;
+    if(State.cloud){
+      FB.db.collection("bcJoin").doc("acts").set({kind: "acts", list: list, updatedAt: Date.now()})["catch"](function(e){ toast(errText(e)); });
+    } else lsSet("bs.acts", list);
+    render();
+  }
+  function actMemo(pp, act){ return ((noteOf(pp.key).acts || {})[act.id]) || ""; }
+  // 진로 신문 칼럼으로 쓴 200자 안팎의 메모(사실만)
+  function paperMemo(pp){
+    var cols = columnsOf(pp).sort(function(a, b){ return (b.updatedAt || 0) - (a.updatedAt || 0); });
+    var c = cols[0];
+    if(!c) return "";
+    var topic = c.dept || "희망 진로";
+    var s = [];
+    s.push("진로 신문 ‘나의 학과를 소개해!’ 제작에서 " + josa(topic, "을", "를") + " 주제로 한 칼럼 ‘" + (c.headline || "") + "’" + (hasBatchim(c.headline || "") ? "을" : "를") + " 작성함.");
+    var fut = listHead(c.future, 2), prep = listHead(c.prepare || c.learn, 2);
+    if(fut || prep){
+      var need = prep ? "이를 위해 필요한 " + prep : "";
+      var obj = fut && prep ? fut + " 등의 진로와 " + need : (fut ? fut + " 등의 진로" : need);
+      s.push("조사한 내용을 바탕으로 " + josa(obj, "을", "를") + " 정리함.");
+    }
+    var n = (c.photos || []).length, st = c.style || {};
+    var chose = [];
+    if(st.pos || st.size) chose.push("사진 배치");
+    if(st.color) chose.push("기사 색");
+    var lay = (n ? "사진 " + n + "장에 설명을 달고 " : "") + (chose.length ? josa(chose.join("와 "), "을", "를") + " 스스로 정해 " : "");
+    if(lay) s.push(lay + (c.size === "full" ? "한 면" : "반 면") + " 지면을 구성함.");
+    if(c.message) s.push("독자에게 ‘" + firstSentence(c.message, 40) + "’라는 메시지를 전함.");
+    // 200자 안팎으로: 길면 뒤의 문장부터 뺍니다(제목 · 조사 내용은 남김)
+    while(s.join(" ").length > 230 && s.length > 2) s.splice(s.length - 1, 1);
+    return s.join(" ").replace(/유튜브|YouTube/gi, "동영상 공유").replace(/넷플릭스|Netflix|티빙|웨이브|디즈니\+?/gi, "OTT")
       .replace(/인스타그램|Instagram|틱톡|TikTok/gi, "SNS");
   }
+  function fillPaper(act, people){
+    var n = 0;
+    people.forEach(function(pp){
+      if(actMemo(pp, act).trim()) return;
+      var t = paperMemo(pp);
+      if(t){ saveNote(pp, "act:" + act.id, t); n++; }
+    });
+    toast(n ? n + "명의 메모를 칼럼으로 채웠습니다 — 비어 있던 칸만 채웠어요" : "새로 채울 칸이 없습니다(이미 썼거나 칼럼이 없음)");
+    render();
+  }
+  // 활동 메모를 날짜 순으로 이어 붙인 초안
+  function draftFromActs(pp){
+    return actsList().map(function(a){ return actMemo(pp, a).trim(); }).filter(Boolean).join(" ");
+  }
   function exportNotes(people){
-    var lines = [["학번", "이름", "세특", "글자 수", "바이트", "메모"]];
+    var acts = actsList();
+    var lines = [["학번", "이름"].concat(acts.map(function(a){ return a.title; })).concat(["세특", "글자 수", "바이트", "기타 메모"])];
     people.forEach(function(pp){
       var nt = noteOf(pp.key);
-      lines.push([pp.sid, pp.name, nt.draft || "", String(nt.draft || "").length, neisBytes(nt.draft), nt.memo || ""]);
+      lines.push([pp.sid, pp.name].concat(acts.map(function(a){ return actMemo(pp, a); }))
+        .concat([nt.draft || "", String(nt.draft || "").length, neisBytes(nt.draft), nt.memo || ""]));
     });
     var csv = lines.map(function(r){
       return r.map(function(v){
@@ -2778,7 +2829,7 @@ var FIREBASE_CONFIG = {
   }
   function noteField(pp, field, label, ph, rows, onInput){
     var f = el("div", "field");
-    var id = "nt-" + field + "-" + noteDocId(pp.key);
+    var id = "nt-" + field.replace(/[^0-9A-Za-z_-]/g, "_") + "-" + noteDocId(pp.key);
     var l = el("label", null, label);
     l.setAttribute("for", id);
     f.appendChild(l);
@@ -2786,7 +2837,8 @@ var FIREBASE_CONFIG = {
     ta.id = id;
     ta.rows = rows;
     ta.placeholder = ph;
-    ta.value = noteOf(pp.key)[field] || "";
+    var nt = noteOf(pp.key);
+    ta.value = field.indexOf("act:") === 0 ? ((nt.acts || {})[field.slice(4)] || "") : (nt[field] || "");
     ta.setAttribute("data-note", "1");
     ta.addEventListener("input", function(){ saveNote(pp, field, ta.value); if(onInput) onInput(ta.value); });
     ta.addEventListener("blur", function(){ setTimeout(function(){ if(!noteFocused()) render(); }, 250); });
@@ -2797,23 +2849,99 @@ var FIREBASE_CONFIG = {
     var ae = document.activeElement;
     return !!(ae && ae.getAttribute && ae.getAttribute("data-note") && $("view").contains(ae));
   }
+  function actForm(act){
+    var box = el("div", "act-form");
+    function inp(id, label, val, type, ph){
+      var f = el("div", "field");
+      var l = el("label", null, label);
+      l.setAttribute("for", id);
+      f.appendChild(l);
+      var i = document.createElement(type === "area" ? "textarea" : "input");
+      if(type === "area") i.rows = 2; else i.type = type;
+      i.id = id;
+      i.value = val || "";
+      if(ph) i.placeholder = ph;
+      i.setAttribute("data-note", "1");
+      f.appendChild(i);
+      box.appendChild(f);
+      return i;
+    }
+    var t = inp("act-title", "활동 이름", act && act.title, "text", "예) 2학기 축제 공연 중계");
+    var d = inp("act-date", "날짜", (act && act.date) || TODAY, "date");
+    var ds = inp("act-desc", "어떤 활동인지 (모두에게 공통, 없어도 됩니다)", act && act.desc, "area", "예) 축제 무대를 촬영 · 중계하고 사회를 봄");
+    var tools = el("div", "tools");
+    tools.appendChild(toolBtn("저장", function(){
+      var title = t.value.trim();
+      if(!title){ toast("활동 이름을 적어 주세요"); t.focus(); return; }
+      var list = actsList();
+      if(act){ list.forEach(function(a){ if(a.id === act.id){ a.title = title; a.date = d.value || a.date; a.desc = ds.value.trim(); } }); }
+      else list.push({id: "act-" + uid(), title: title, date: d.value || TODAY, desc: ds.value.trim()});
+      actEditing = null;
+      saveActs(list);
+      toast(act ? "활동을 고쳤습니다" : "활동을 더했습니다 — 부원마다 메모 칸이 생겼어요");
+    }));
+    tools.appendChild(toolBtn("취소", function(){
+      actEditing = null;
+      if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      render();
+    }));
+    box.appendChild(tools);
+    setTimeout(function(){ t.focus(); }, 30);
+    return box;
+  }
+  function renderActs(v, people){
+    var s = el("section");
+    var add = el("button", "link-btn", "＋ 활동 추가");
+    add.type = "button";
+    add.addEventListener("click", function(){ actEditing = "new"; render(); });
+    var acts = actsList();
+    s.appendChild(secHead("활동 " + acts.length + "개", "부원 모두에게 들어갑니다", add));
+    var list = el("div", "acts");
+    acts.forEach(function(a){
+      if(actEditing === a.id){ list.appendChild(actForm(a)); return; }
+      var row = el("div", "act-row");
+      var main = el("div", "act-main");
+      var h = el("div", "act-h");
+      h.appendChild(el("span", "act-date", mdText(a.date)));
+      h.appendChild(el("b", null, a.title));
+      main.appendChild(h);
+      if(a.desc) main.appendChild(el("p", null, a.desc));
+      var filled = people.filter(function(pp){ return actMemo(pp, a).trim(); }).length;
+      main.appendChild(el("small", null, "메모 " + filled + " / " + people.length + "명"));
+      row.appendChild(main);
+      var tools = el("div", "tools");
+      if(a.source === "paper") tools.appendChild(toolBtn("칼럼으로 메모 채우기", function(){ fillPaper(a, people); }));
+      tools.appendChild(toolBtn("고치기", function(){ actEditing = a.id; render(); }));
+      tools.appendChild(toolBtn("지우기", function(){
+        if(!window.confirm("‘" + a.title + "’ 활동을 지울까요? 부원별 메모 칸이 목록에서 사라집니다.")) return;
+        saveActs(actsList().filter(function(x){ return x.id !== a.id; }));
+      }, true));
+      row.appendChild(tools);
+      list.appendChild(row);
+    });
+    if(actEditing === "new") list.appendChild(actForm(null));
+    s.appendChild(list);
+    v.appendChild(s);
+  }
   function renderNotes(v){
     var sec = el("section");
     sec.appendChild(el("h1", "page-title", "동아리 세특"));
-    sec.appendChild(el("p", "page-sub", "부원마다 메모와 세특 초안을 정리합니다. 선생님만 볼 수 있습니다."));
+    sec.appendChild(el("p", "page-sub", "활동마다 부원별 메모를 적고, 모아서 세특을 씁니다. 선생님만 볼 수 있습니다."));
     v.appendChild(sec);
     var people = notePeople();
     var info = el("div", "notice");
     info.appendChild(el("b", null, "2026학년도 기재요령 "));
-    info.appendChild(document.createTextNode("동아리활동 특기사항은 500자(1,500바이트)까지, 실제적인 활동과 역할 위주로 개별적 특성이 드러나게 씁니다. "
-      + "학교명 · 상호명 · 대학명 · 대회 수상 · 논문은 쓸 수 없고, AI로 만든 글을 그대로 넣으면 안 됩니다. ‘제출물로 초안 넣기’는 사이트 기록의 사실만 이어 둔 뼈대이니 관찰한 내용으로 다듬어 쓰세요."));
+    info.appendChild(document.createTextNode("동아리활동 특기사항은 연간 500자(1,500바이트)까지, 실제적인 활동과 역할 위주로 개별적 특성이 드러나게 씁니다. "
+      + "학교명 · 상호명 · 대학명 · 대회 수상 · 논문은 쓸 수 없고, AI로 만든 글을 그대로 넣으면 안 됩니다. ‘칼럼으로 메모 채우기’는 사이트 기록의 사실만 이은 뼈대이니 관찰한 내용으로 다듬어 쓰세요."));
     v.appendChild(info);
+    renderActs(v, people);
+    var acts = actsList();
     var done = people.filter(function(pp){ var d = noteOf(pp.key).draft || ""; return d.trim() && !noteChecks(d).length; }).length;
     var s2 = el("section");
     var exp = el("button", "link-btn", "세특 표 내려받기");
     exp.type = "button";
     exp.addEventListener("click", function(){ exportNotes(people); });
-    s2.appendChild(secHead("부원 " + people.length + "명", "초안 점검 통과 " + done + "명", exp));
+    s2.appendChild(secHead("부원 " + people.length + "명", "세특 점검 통과 " + done + "명", exp));
     if(!people.length){ s2.appendChild(emptyBox("아직 부원이 없어요", "부원이 가입하면 여기에 한 명씩 뜹니다")); v.appendChild(s2); return; }
     var list = el("div", "notes");
     people.forEach(function(pp){
@@ -2827,9 +2955,10 @@ var FIREBASE_CONFIG = {
       var sum = document.createElement("summary");
       sum.appendChild(el("b", null, pp.name));
       if(pp.sid) sum.appendChild(el("small", "sid", pp.sid));
-      var stt = !d.trim() ? ["비어 있음", "todo"] : (issues.length ? ["점검 " + issues.length, "warn"] : ["초안 " + d.length + "자", "ok"]);
+      var filled = acts.filter(function(a){ return actMemo(pp, a).trim(); }).length;
+      sum.appendChild(el("span", "note-memo", "활동 메모 " + filled + " / " + acts.length));
+      var stt = !d.trim() ? ["세특 비어 있음", "todo"] : (issues.length ? ["점검 " + issues.length, "warn"] : ["세특 " + d.length + "자", "ok"]);
       sum.appendChild(el("span", "note-st " + stt[1], stt[0]));
-      if(nt.memo) sum.appendChild(el("span", "note-memo", "메모 있음"));
       det.appendChild(sum);
       var body = el("div", "note-body");
       var left = el("div");
@@ -2837,9 +2966,29 @@ var FIREBASE_CONFIG = {
       var ev = evidenceOf(pp);
       var ul = el("ul", "note-ev");
       if(ev.length) ev.forEach(function(t){ ul.appendChild(el("li", null, t)); });
-      else ul.appendChild(el("li", null, "사이트에 남은 기록이 없습니다. 메모에 관찰 내용을 적어 주세요."));
+      else ul.appendChild(el("li", null, "사이트에 남은 기록이 없습니다."));
       left.appendChild(ul);
-      left.appendChild(noteField(pp, "memo", "메모 (관찰 기록 · 누가기록)", "예) 10/28 신문 제작: 사진 배치를 여러 번 바꿔 보며 지면을 완성함. 다른 부원 칼럼에 구체적인 피드백을 남김.", 5).box);
+      left.appendChild(el("h3", null, "활동별 메모"));
+      acts.forEach(function(a){
+        var small = el("small", "act-len");
+        var fld = noteField(pp, "act:" + a.id, mdText(a.date) + " · " + a.title, "이 활동에서 이 학생이 한 일 · 역할 · 보인 모습", 3, function(val){ small.textContent = val.length + "자"; });
+        small.textContent = fld.ta.value.length + "자";
+        fld.box.appendChild(small);
+        if(a.source === "paper" && !fld.ta.value.trim() && columnsOf(pp).length){
+          var fb = toolBtn("칼럼으로 채우기", function(){
+            fld.ta.value = paperMemo(pp);
+            saveNote(pp, "act:" + a.id, fld.ta.value);
+            small.textContent = fld.ta.value.length + "자";
+            fld.ta.focus();
+          });
+          var fw = el("span", "tools");
+          fw.style.marginLeft = "10px";
+          fw.appendChild(fb);
+          fld.box.appendChild(fw);
+        }
+        left.appendChild(fld.box);
+      });
+      left.appendChild(noteField(pp, "memo", "기타 메모 (누가기록)", "활동 밖에서 본 모습, 나중에 쓸 내용 등", 3).box);
       body.appendChild(left);
       var right = el("div");
       var cnt = el("div", "note-count");
@@ -2851,23 +3000,24 @@ var FIREBASE_CONFIG = {
         clear(chk);
         noteChecks(val).forEach(function(t){ chk.appendChild(el("li", null, t)); });
       }
-      var df = noteField(pp, "draft", "세특 초안", "제출물과 메모를 바탕으로 씁니다. 아래 ‘제출물로 초안 넣기’를 누르면 사실만 이어 둔 뼈대가 들어옵니다.", 8, refresh);
+      var df = noteField(pp, "draft", "세특 (교육정보시스템에 넣을 글)", "‘활동 메모로 초안 만들기’를 누르면 활동 메모가 날짜 순으로 이어집니다. 그다음 다듬어 쓰세요.", 10, refresh);
       right.appendChild(df.box);
       right.appendChild(cnt);
       right.appendChild(chk);
       refresh(df.ta.value);
       var tools = el("div", "tools");
-      tools.appendChild(toolBtn("제출물로 초안 넣기", function(){
-        var cur = df.ta.value.trim();
-        if(cur && !window.confirm("지금 초안을 지우고 제출물로 만든 뼈대를 넣을까요?")) return;
-        df.ta.value = draftFor(pp);
-        saveNote(pp, "draft", df.ta.value);
-        refresh(df.ta.value);
+      tools.appendChild(toolBtn("활동 메모로 초안 만들기", function(){
+        var t = draftFromActs(pp);
+        if(!t){ toast("활동 메모가 아직 없습니다"); return; }
+        if(df.ta.value.trim() && !window.confirm("지금 세특을 지우고 활동 메모를 이어 붙인 초안을 넣을까요?")) return;
+        df.ta.value = t;
+        saveNote(pp, "draft", t);
+        refresh(t);
         df.ta.focus();
       }));
       tools.appendChild(toolBtn("세특 복사", function(){
         var t = df.ta.value;
-        if(!t.trim()){ toast("초안이 비어 있습니다"); return; }
+        if(!t.trim()){ toast("세특이 비어 있습니다"); return; }
         if(navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ toast("복사했습니다 — 교육정보시스템에 붙여 넣으세요"); }, function(){ df.ta.select(); });
         else df.ta.select();
       }));
